@@ -2,6 +2,8 @@
     let hearts = [];
     const canvas = document.getElementById('heartCanvas');
     const context = canvas.getContext('2d');
+    let currentTheme = 'hearts'; // 当前主题
+    let animationId;
 
     window.onresize = resizeCanvas;
     resizeCanvas();
@@ -32,7 +34,7 @@
                 i--;
             }
         }
-        requestAnimationFrame(render);
+        animationId = requestAnimationFrame(render);
     }
 
     function drawHeart(ctx) {
@@ -46,18 +48,20 @@
         ctx.fill();
     }
 
-    setInterval(() => {
+    const heartInterval = setInterval(() => {
         const x = Math.random() * window.innerWidth;
         const y = window.innerHeight + 50;
         createHeart(x, y, 'auto');
     }, 800);
 
     window.onclick = function(event) {
-        createHeart(event.clientX, event.clientY, 'mouse');
+        if (currentTheme === 'hearts') {
+            createHeart(event.clientX, event.clientY, 'mouse');
+        }
     }
 
     window.onmousemove = function(event) {
-        if (Math.random() < 0.05) {
+        if (currentTheme === 'hearts' && Math.random() < 0.05) {
             createHeart(event.clientX, event.clientY, 'mouse');
         }
     }
@@ -86,5 +90,29 @@
         });
     }
 
+    // 停止心形效果
+    function stopHearts() {
+        canvas.style.display = 'none';
+        hearts = [];
+        clearInterval(heartInterval);
+        if (animationId) {
+            cancelAnimationFrame(animationId);
+        }
+    }
+
+    // 启动心形效果
+    function startHearts() {
+        canvas.style.display = 'block';
+        currentTheme = 'hearts';
+        render();
+    }
+
+    // 暴露函数给全局
+    window.heartsController = {
+        stop: stopHearts,
+        start: startHearts
+    };
+
+    // 初始启动
     render();
 })();

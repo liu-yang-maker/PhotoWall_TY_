@@ -12,6 +12,14 @@
 </head>
 <body>
     <canvas id="heartCanvas"></canvas>
+    <canvas id="starCanvas"></canvas>
+
+    <!-- 背景切换按钮 -->
+    <div id="themeToggle" class="theme-toggle">
+        <button id="themeBtn" title="切换背景效果">
+            <span id="themeIcon">💝</span>
+        </button>
+    </div>
 
     <nav>
         <div class="container">
@@ -21,7 +29,7 @@
 
     <main>
         <section id="name">
-            <h2>Xiaotong & Yang</h2> <!--**Name**-->
+            <h2>Xiaotong & Yang</h2>
         </section>
 
         <section id="timer">
@@ -30,18 +38,35 @@
             <h2><span id="loveDays">0</span> Days</h2>
         </section>
 
+        <!-- 每日情话生成器 -->
+        <section id="loveQuote">
+            <div class="quote-container">
+                <div class="quote-icon">💕</div>
+                <p id="quoteText">Loading...</p>
+                <button id="newQuoteBtn" class="quote-btn">换一句情话</button>
+            </div>
+        </section>
+
         <section id="dates">
             <div class="date-item">
-                <p>1998.10.24</p> <!--**Birthday**-->
+                <p>1998.10.24</p>
                 <span>Her Birthday</span>
             </div>
             <div class="date-item">
-                <p>1997.11.22</p> <!--**Birthday**-->
+                <p>1997.11.22</p>
                 <span>His Birthday</span>
             </div>
             <div class="date-item">
-                <p>2025.11.22</p> <!--**Love date**-->
+                <p>2025.11.22</p>
                 <span>Anniversary</span>
+            </div>
+        </section>
+
+        <!-- 恋爱时间轴 -->
+        <section id="timeline">
+            <h2 class="section-title">Our Love Story Timeline</h2>
+            <div class="timeline-container" id="timelineContainer">
+                <!-- 时间轴内容将通过JavaScript动态生成 -->
             </div>
         </section>
 
@@ -51,7 +76,7 @@
 
     <footer>
         <div class="container">
-            <p>&copy; Written by <a href="https://github.com/liu-yang-maker" target="_blank">liu-yang-maker</a>. target="_blank">Photo_Wall</a>.</p>
+            <p>&copy; Written by <a href="https://github.com/liu-yang-maker" target="_blank">liu-yang-maker</a>. Enhanced with ❤️</p>
         </div>
     </footer>
 
@@ -61,11 +86,12 @@
         <img id="popupImg" src="" alt="Large Image">
     </div>
 
-    <div id="leftArrow" class="arrow">❮</div>
-    <div id="rightArrow" class="arrow">❯</div>
+    <div id="leftArrow" class="arrow">◄</div>
+    <div id="rightArrow" class="arrow">►</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
     <script src="script.js"></script>
     <script src="hearts.js"></script>
+    <script src="starry.js"></script>
 </body>
 </html>

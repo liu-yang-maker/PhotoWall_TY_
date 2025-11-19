@@ -1,17 +1,71 @@
 const imageContainer = document.getElementById('gallery');
 let index = 0;
 let loading = false;
-const batchSize = 10; // The number of images loaded per batch
-const initialBatchCount = 5; // The number of batches initially loaded
-const scrolldistance = 1000; // The distance from the bottom of the page to start loading more images
+const batchSize = 10;
+const initialBatchCount = 5;
+const scrolldistance = 1000;
 let currentImageIndex = 0;
 let loadedImages = [];
 let leftArrow;
 let rightArrow;
 
-// Calculate the number of days since the start date
+// 情话库
+const loveQuotes = [
+    "遇见你的那一刻，星星都失去了颜色 ✨",
+    "你是我今生最美的相遇，余生最好的陪伴 💖",
+    "在这个世界上，只有你让我愿意打破所有规则 🌹",
+    "如果世界上有一千种幸福，其中九百九十九种是因为你 🎈",
+    "陪伴是最长情的告白，相守是最温暖的承诺 💕",
+    "你的名字，是我见过最短的情诗 📝",
+    "余生很长，我想和你在一起浪费时光 ⏰",
+    "有你在的地方，就是家的方向 🏠",
+    "因为是你，所以万里迢迢 🚀",
+    "我的心跳和你的呼吸，是世界上最美的音乐 🎵",
+    "如果可以，我想做你的眼睛，看你看的世界 👀",
+    "你是我的今天，也是我所有的明天 🌅",
+    "爱你是我做过最好的决定 💝",
+    "想把全世界最好的都给你，却发现最好的就是你 🎁",
+    "春风十里，不如你 🌸",
+    "我喜欢你，认真且怂，从一而终 💗",
+    "你是我的意外，也是我的宿命 🎲",
+    "陪你到世界终结，看尽人间烟火 🎆",
+    "所有的心动，都是因为你 💓",
+    "你是我的唯一，也是我的永远 ♾️"
+];
+
+// 时间轴数据 - 你可以根据实际情况修改这些数据
+const timelineData = [
+    {
+        date: "2025.11.22",
+        title: "我们在一起了",
+        description: "这一天，我们正式确定了关系，从此开启了甜蜜的恋爱之旅 💑"
+    },
+    {
+        date: "2025.12.25",
+        title: "第一个圣诞节",
+        description: "一起度过的第一个圣诞节，交换了礼物，留下了美好的回忆 🎄"
+    },
+    {
+        date: "2026.01.01",
+        title: "跨年夜",
+        description: "在烟花绽放的那一刻，我们许下了永远在一起的愿望 🎆"
+    },
+    {
+        date: "2026.02.14",
+        title: "第一个情人节",
+        description: "玫瑰、巧克力和你，这个情人节有你，就是最浪漫的节日 🌹"
+    },
+    {
+        date: "2026.05.20",
+        title: "第一次旅行",
+        description: "我们一起去了海边，看日出日落，留下了许多美好的照片 🏖️"
+    }
+    // 你可以继续添加更多的时间轴事件
+];
+
+// 计算恋爱天数
 function calculateLoveDays() {
-    const startDate = new Date('2025-11'); // **Love date**
+    const startDate = new Date('2025-11-22'); // 修改为你们的恋爱纪念日
     const today = new Date();
     startDate.setHours(0, 0, 0, 0);
     today.setHours(0, 0, 0, 0);
@@ -20,7 +74,68 @@ function calculateLoveDays() {
     document.getElementById('loveDays').innerText = days;
 }
 
-// Load images in batches when the user scrolls to the bottom of the page
+// 生成每日情话
+function generateDailyQuote() {
+    const today = new Date();
+    const seed = today.getFullYear() * 10000 + (today.getMonth() + 1) * 100 + today.getDate();
+    const index = seed % loveQuotes.length;
+    return loveQuotes[index];
+}
+
+// 随机生成情话
+function generateRandomQuote() {
+    const randomIndex = Math.floor(Math.random() * loveQuotes.length);
+    return loveQuotes[randomIndex];
+}
+
+// 显示情话
+function displayQuote(quote) {
+    const quoteText = document.getElementById('quoteText');
+    quoteText.style.opacity = '0';
+    quoteText.style.transform = 'translateY(10px)';
+    
+    setTimeout(() => {
+        quoteText.innerText = quote;
+        quoteText.style.opacity = '1';
+        quoteText.style.transform = 'translateY(0)';
+        quoteText.style.transition = 'all 0.5s ease';
+    }, 300);
+}
+
+// 渲染时间轴
+function renderTimeline() {
+    const timelineContainer = document.getElementById('timelineContainer');
+    
+    timelineData.forEach((item, index) => {
+        const timelineItem = document.createElement('div');
+        timelineItem.className = 'timeline-item';
+        timelineItem.style.animationDelay = `${index * 0.2}s`;
+        
+        const isLeft = index % 2 === 0;
+        
+        timelineItem.innerHTML = `
+            ${isLeft ? `
+                <div class="timeline-date">${item.date}</div>
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                    <h3>${item.title}</h3>
+                    <p>${item.description}</p>
+                </div>
+            ` : `
+                <div class="timeline-content">
+                    <h3>${item.title}</h3>
+                    <p>${item.description}</p>
+                </div>
+                <div class="timeline-dot"></div>
+                <div class="timeline-date">${item.date}</div>
+            `}
+        `;
+        
+        timelineContainer.appendChild(timelineItem);
+    });
+}
+
+// 图片加载相关函数（保持原有功能）
 async function loadImages(batchCount = 1) {
     if (loading) return;
     loading = true;
@@ -48,7 +163,6 @@ async function loadImages(batchCount = 1) {
     loading = false;
 }
 
-// Load a thumbnail image and create an image element
 function loadThumbnail(index) {
     return new Promise((resolve) => {
         const thumbImg = new Image();
@@ -59,7 +173,6 @@ function loadThumbnail(index) {
             createImageElement(thumbImg, index, resolve);
         };
 
-        // If the thumbnail image fails to load, try loading the full-size image
         thumbImg.onerror = function () {
             thumbImg.src = `images/${index}.jpg`;
             thumbImg.onload = function () {
@@ -105,7 +218,6 @@ function loadThumbnail(index) {
     });
 }
 
-// Display a popup with the full-size image
 function showPopup(src, date, index) {
     currentImageIndex = index;
     const popup = document.getElementById('popup');
@@ -147,7 +259,6 @@ function showPopup(src, date, index) {
     }
 }
 
-// Close the popup
 function closePopup() {
     const popup = document.getElementById('popup');
     const popupImg = document.getElementById('popupImg');
@@ -160,7 +271,6 @@ function closePopup() {
     rightArrow.style.display = 'none';
 }
 
-// Load the previous image
 function handleScroll() {
     const scrollTop = window.scrollY;
     const windowHeight = window.innerHeight;
@@ -171,7 +281,6 @@ function handleScroll() {
     }
 }
 
-// Show the previous image in the popup (when the left arrow is clicked)
 function showPreviousImage() {
     const prevIndex = currentImageIndex - 1;
     if (prevIndex >= 0) {
@@ -185,7 +294,6 @@ function showPreviousImage() {
     }
 }
 
-// Show the next image in the popup (when the right arrow is clicked)
 function showNextImage() {
     const nextIndex = currentImageIndex + 1;
     if (loadedImages[nextIndex]) {
@@ -197,7 +305,6 @@ function showNextImage() {
     }
 }
 
-// Keyboard navigation for the popup
 window.addEventListener('keydown', function (event) {
     const popup = document.getElementById('popup');
     if (popup.style.display === 'block') {
@@ -211,10 +318,23 @@ window.addEventListener('keydown', function (event) {
     }
 });
 
-// Load the initial images and set up event listeners
+// 页面加载完成后初始化所有功能
 window.onload = function () {
+    // 计算恋爱天数
     calculateLoveDays();
+    
+    // 显示每日情话
+    displayQuote(generateDailyQuote());
+    
+    // 渲染时间轴
+    renderTimeline();
+    
+    // 情话按钮事件
+    document.getElementById('newQuoteBtn').addEventListener('click', function() {
+        displayQuote(generateRandomQuote());
+    });
 
+    // 加载图片
     loadImages(initialBatchCount).then(() => {
         window.addEventListener('scroll', handleScroll);
     });

@@ -33,6 +33,46 @@ nav h1 {
     margin: 0;
 }
 
+/* 背景切换按钮 */
+#backgroundSwitch {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    z-index: 101;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.bg-btn {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 2px solid #ff6f61;
+    background-color: rgba(255, 255, 255, 0.9);
+    font-size: 24px;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.bg-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 15px rgba(255, 111, 97, 0.3);
+}
+
+.bg-btn.active {
+    background-color: #ff6f61;
+    border-color: #ff6f61;
+    box-shadow: 0 4px 15px rgba(255, 111, 97, 0.5);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
 main {
     margin-top: 80px;
 }
@@ -47,6 +87,58 @@ main {
     font-size: 36px;
     color: #ff6f61;
     padding: 0;
+}
+
+/* 情话生成器样式 */
+#loveQuote {
+    text-align: center;
+    padding: 30px 20px;
+    margin: 20px auto;
+    max-width: 800px;
+}
+
+.quote-container {
+    background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 8px 20px rgba(255, 111, 97, 0.2);
+    animation: fadeInUp 1s forwards;
+}
+
+#quoteText {
+    font-family: 'Pacifico', cursive;
+    font-size: 22px;
+    color: #2d3436;
+    margin-bottom: 20px;
+    line-height: 1.6;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.3s;
+}
+
+#quoteBtn {
+    background-color: #ff6f61;
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 25px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 10px rgba(255, 111, 97, 0.3);
+    font-family: 'Montserrat', sans-serif;
+}
+
+#quoteBtn:hover {
+    background-color: #ff5549;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(255, 111, 97, 0.4);
+}
+
+#quoteBtn:active {
+    transform: translateY(0);
 }
 
 #timer {
@@ -111,6 +203,35 @@ main {
     color: #777;
 }
 
+/* 视图切换按钮 */
+#viewSwitch {
+    text-align: center;
+    margin: 40px 0 20px 0;
+}
+
+.view-btn {
+    background-color: #ffffff;
+    color: #333;
+    border: 2px solid #ff6f61;
+    padding: 12px 30px;
+    margin: 0 10px;
+    border-radius: 25px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.view-btn:hover {
+    background-color: #ffebe9;
+}
+
+.view-btn.active {
+    background-color: #ff6f61;
+    color: white;
+}
+
+/* 照片墙样式 */
 #gallery {
     display: flex;
     flex-wrap: wrap;
@@ -135,15 +256,130 @@ main {
     cursor: pointer;
 }
 
-#gallery img::after {
-    content: attr(data-date);
+/* 时间轴样式 */
+#timeline {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.view-hidden {
+    display: none;
+}
+
+.view-active {
+    display: block;
+}
+
+.timeline-container {
+    position: relative;
+    padding: 20px 0;
+}
+
+.timeline-month {
+    margin-bottom: 50px;
+    animation: fadeInUp 0.8s forwards;
+    opacity: 0;
+}
+
+.timeline-month:nth-child(1) { animation-delay: 0.1s; }
+.timeline-month:nth-child(2) { animation-delay: 0.2s; }
+.timeline-month:nth-child(3) { animation-delay: 0.3s; }
+.timeline-month:nth-child(4) { animation-delay: 0.4s; }
+.timeline-month:nth-child(5) { animation-delay: 0.5s; }
+
+.month-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.month-title {
+    font-family: 'Pacifico', cursive;
+    font-size: 32px;
+    color: #ff6f61;
+    display: inline-block;
+    padding: 10px 30px;
+    background: linear-gradient(135deg, #ffeaa7 0%, #fab1a0 100%);
+    border-radius: 30px;
+    box-shadow: 0 4px 15px rgba(255, 111, 97, 0.2);
+}
+
+.timeline-days {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.timeline-day {
+    background-color: #ffffff;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.timeline-day:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(255, 111, 97, 0.2);
+}
+
+.day-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #ffe0de;
+}
+
+.day-date {
+    font-size: 20px;
+    font-weight: bold;
+    color: #ff6f61;
+    margin-right: 15px;
+}
+
+.day-weekday {
+    font-size: 14px;
+    color: #777;
+    padding: 4px 12px;
+    background-color: #ffe0de;
+    border-radius: 12px;
+}
+
+.day-photos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+}
+
+.timeline-photo {
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+    border-radius: 10px;
+    aspect-ratio: 1;
+}
+
+.timeline-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s;
+}
+
+.timeline-photo:hover img {
+    transform: scale(1.1);
+}
+
+.photo-time {
     position: absolute;
-    bottom: 10px;
-    left: 10px;
-    color: #fff;
-    font-size: 12px;
-    text-shadow: 1px 1px 2px #000;
-    pointer-events: none;
+    bottom: 5px;
+    right: 5px;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 11px;
 }
 
 #popup {
@@ -178,7 +414,6 @@ main {
     left: 50%;
     transform: translate(-50%, -50%);
 }
-
 
 #closeBtn {
     position: absolute;
@@ -273,4 +508,30 @@ body::before {
 
 .container a:hover {
     color: #2b2b2b;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    #backgroundSwitch {
+        right: 10px;
+        top: 70px;
+    }
+    
+    .bg-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+    }
+    
+    #quoteText {
+        font-size: 18px;
+    }
+    
+    .month-title {
+        font-size: 24px;
+    }
+    
+    .day-photos {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    }
 }
