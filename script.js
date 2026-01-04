@@ -26,7 +26,9 @@ const loveQuotes = [
     "你是我的意外，也是我的宿命 🎲",
     "陪你到世界终结，看尽人间烟火 🎆",
     "所有的心动，都是因为你 💓",
-    "你是我的唯一，也是我的永远 ♾️"
+    "你是我的唯一，也是我的永远 ♾️",
+    "You are my unexpected encounter, but also my forever love.",
+    "Choosing to love you is to love you forever!",
 ];
 
 // 时间轴数据 - 你可以根据实际情况修改这些数据
