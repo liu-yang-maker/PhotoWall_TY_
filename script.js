@@ -120,36 +120,37 @@ function displayQuote(quote) {
     }, 300);
 }
 
-// 渲染时间轴
+// 渲染时间轴（横向时间轴 + 时间点 + 文本块）
 function renderTimeline() {
     const timelineContainer = document.getElementById('timelineContainer');
-    
+    timelineContainer.innerHTML = '';
+
+    // 先添加一条线，由下面的逻辑根据事件数量动态调节长度
+    const line = document.createElement('div');
+    line.className = 'timeline-line';
+    timelineContainer.appendChild(line);
+
     timelineData.forEach((item, index) => {
         const timelineItem = document.createElement('div');
         timelineItem.className = 'timeline-item';
-        timelineItem.style.animationDelay = `${index * 0.2}s`;
-        
-        const isLeft = index % 2 === 0;
-        
+        timelineItem.style.animationDelay = `${index * 0.15}s`;
+
         timelineItem.innerHTML = `
-            ${isLeft ? `
-                <div class="timeline-date">${item.date}</div>
-                <div class="timeline-dot"></div>
-                <div class="timeline-content">
-                    <h3>${item.title}</h3>
-                    <p>${item.description}</p>
-                </div>
-            ` : `
-                <div class="timeline-content">
-                    <h3>${item.title}</h3>
-                    <p>${item.description}</p>
-                </div>
-                <div class="timeline-dot"></div>
-                <div class="timeline-date">${item.date}</div>
-            `}
+            <div class="timeline-content">
+                <h3>${item.title}</h3>
+                <p>${item.description}</p>
+            </div>
+            <div class="timeline-dot"></div>
+            <div class="timeline-date">${item.date}</div>
         `;
-        
+
         timelineContainer.appendChild(timelineItem);
+    });
+
+    // 等 DOM 更新完后，根据内容总宽度动态设置时间轴线的长度
+    requestAnimationFrame(() => {
+        const totalWidth = timelineContainer.scrollWidth;
+        line.style.width = `${totalWidth}px`;
     });
 }
 
