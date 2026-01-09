@@ -9,6 +9,9 @@ let loadedImages = [];
 let leftArrow;
 let rightArrow;
 
+// 新增：保存所有图片文件名（Python 生成的 image_list.json）
+let imageList = [];
+
 // 情话库
 const loveQuotes = [
     "遇见你的那一刻，星星都失去了颜色 ✨",
@@ -31,7 +34,7 @@ const loveQuotes = [
     "Choosing to love you is to love you forever!",
 ];
 
-// 时间轴数据 - 你可以根据实际情况修改这些数据
+// 时间轴数据
 const timelineData = [
     {
         date: "2025.11.14",
@@ -68,22 +71,11 @@ const timelineData = [
         title: "我们在新年·许下约定",
         description: "“去岁千般皆如愿，今年万事定称心。”这是我们第一次一起跨年，你在身边，就是最好的新年礼物。我说了很多心里话，也听你讲了很多过去的故事。我时常担心爱得太快，却又庆幸相遇不晚。我想给你安全感，也想给你全部的我。未来的路还很长，但我想和你一起，一步一步把它走成我们的故事。"
     },
-    // {
-    //     date: "2026.02.14",
-    //     title: "第一个情人节",
-    //     description: "玫瑰、巧克力和你，这个情人节有你，就是最浪漫的节日 🌹"
-    // },
-    // {
-    //     date: "2026.05.20",
-    //     title: "第一次旅行",
-    //     description: "我们一起去了海边，看日出日落，留下了许多美好的照片 🏖️"
-    // }
-    // 你可以继续添加更多的时间轴事件
 ];
 
 // 计算恋爱天数
 function calculateLoveDays() {
-    const startDate = new Date('2025-11-22'); // 修改为你们的恋爱纪念日
+    const startDate = new Date('2025-11-22');
     const today = new Date();
     startDate.setHours(0, 0, 0, 0);
     today.setHours(0, 0, 0, 0);
@@ -111,7 +103,7 @@ function displayQuote(quote) {
     const quoteText = document.getElementById('quoteText');
     quoteText.style.opacity = '0';
     quoteText.style.transform = 'translateY(10px)';
-    
+
     setTimeout(() => {
         quoteText.innerText = quote;
         quoteText.style.opacity = '1';
@@ -120,7 +112,7 @@ function displayQuote(quote) {
     }, 300);
 }
 
-// 自动轮换情话（提升一点动态感）
+// 自动轮换情话
 let quoteInterval;
 function startQuoteAutoRotate() {
     if (quoteInterval) {
@@ -128,15 +120,14 @@ function startQuoteAutoRotate() {
     }
     quoteInterval = setInterval(() => {
         displayQuote(generateRandomQuote());
-    }, 30000); // 每 30 秒切换一次
+    }, 30000);
 }
 
-// 渲染时间轴（横向时间轴 + 时间点 + 文本块）
+// 渲染时间轴
 function renderTimeline() {
     const timelineContainer = document.getElementById('timelineContainer');
     timelineContainer.innerHTML = '';
 
-    // 先添加一条线，由下面的逻辑根据事件数量动态调节长度
     const line = document.createElement('div');
     line.className = 'timeline-line';
     timelineContainer.appendChild(line);
@@ -158,24 +149,55 @@ function renderTimeline() {
         timelineContainer.appendChild(timelineItem);
     });
 
-    // 等 DOM 更新完后，根据内容总宽度动态设置时间轴线的长度
     requestAnimationFrame(() => {
         const totalWidth = timelineContainer.scrollWidth;
         line.style.width = `${totalWidth}px`;
     });
 }
 
-// 图片加载相关函数（保持原有功能）
+// 新增：加载 image_list.json
+async function loadImageList() {
+    try {
+        // 加一个时间戳，避免浏览器缓存旧的 json
+        const res = await fetch(`images/image_list.json?ts=${Date.now()}`);
+        if (!res.ok) {
+            console.error('Failed to load image_list.json');
+            return;
+        }
+        const list = await res.json();
+        if (Array.isArray(list)) {
+            imageList = list;
+        } else {
+            console.error('image_list.json format error');
+        }
+    } catch (e) {
+        console.error('Error loading image_list.json', e);
+    }
+}
+
+// 图片加载相关函数
 async function loadImages(batchCount = 1) {
     if (loading) return;
+    if (!imageList || imageList.length === 0) {
+        console.log('No images to load.');
+        return;
+    }
+
     loading = true;
 
     for (let b = 0; b < batchCount; b++) {
         const batchPromises = [];
+
         for (let i = 0; i < batchSize; i++) {
+            if (index >= imageList.length) break;
             batchPromises.push(loadThumbnail(index));
             index++;
         }
+
+        if (batchPromises.length === 0) {
+            break;
+        }
+
         const results = await Promise.all(batchPromises);
 
         results.forEach((img) => {
@@ -184,7 +206,7 @@ async function loadImages(batchCount = 1) {
 
         const loadMore = results.some((img) => img);
 
-        if (!loadMore) {
+        if (!loadMore || index >= imageList.length) {
             window.removeEventListener('scroll', handleScroll);
             console.log('All images have been loaded and displayed.');
             break;
@@ -193,63 +215,83 @@ async function loadImages(batchCount = 1) {
     loading = false;
 }
 
-function loadThumbnail(index) {
+function loadThumbnail(listIndex) {
     return new Promise((resolve) => {
+        if (!imageList[listIndex]) {
+            resolve(null);
+            return;
+        }
+
+        const filename = imageList[listIndex];
         const thumbImg = new Image();
         thumbImg.crossOrigin = 'Anonymous';
-        thumbImg.src = `images/thumbs/${index}.jpg`;
+        thumbImg.src = `images/thumbs/${filename}`;
 
         thumbImg.onload = function () {
-            createImageElement(thumbImg, index, resolve);
+            createImageElement(thumbImg, listIndex, filename, resolve);
         };
 
         thumbImg.onerror = function () {
-            thumbImg.src = `images/${index}.jpg`;
+            // 如果缩略图不存在，就直接用原图
+            thumbImg.src = `images/${filename}`;
             thumbImg.onload = function () {
-                createImageElement(thumbImg, index, resolve);
+                createImageElement(thumbImg, listIndex, filename, resolve);
             };
             thumbImg.onerror = function () {
                 resolve(null);
             };
         };
-
-        function createImageElement(thumbImg, index, resolve) {
-            const imgElement = document.createElement('img');
-            imgElement.dataset.large = `images/${index}.jpg`;
-            imgElement.src = thumbImg.src;
-            imgElement.alt = `Image ${index}`;
-            imgElement.setAttribute('data-date', '');
-            imgElement.setAttribute('data-index', index);
-
-            EXIF.getData(thumbImg, function () {
-                let exifDate = EXIF.getTag(this, 'DateTimeOriginal');
-                if (exifDate) {
-                    exifDate = exifDate.replace(/^(\d{4}):(\d{2}):(\d{2}).*$/, '$1.$2.$3');
-                } else {
-                    exifDate = '';
-                }
-                imgElement.setAttribute('data-date', exifDate);
-
-                loadedImages[index] = {
-                    src: imgElement.dataset.large,
-                    date: exifDate,
-                };
-            });
-
-            imgElement.addEventListener('click', function () {
-                showPopup(imgElement.dataset.large, imgElement.getAttribute('data-date'), index);
-            });
-
-            imgElement.style.cursor = 'pointer';
-            imgElement.classList.add('thumbnail');
-
-            resolve(imgElement);
-        }
     });
 }
 
-function showPopup(src, date, index) {
-    currentImageIndex = index;
+function createImageElement(thumbImg, listIndex, filename, resolve) {
+    const imgElement = document.createElement('img');
+    imgElement.dataset.large = `images/${filename}`;
+    imgElement.src = thumbImg.src;
+    imgElement.alt = filename;
+    imgElement.setAttribute('data-date', '');
+    imgElement.setAttribute('data-index', listIndex);
+
+    // 先尝试从 EXIF 读日期
+    EXIF.getData(thumbImg, function () {
+        let exifDate = EXIF.getTag(this, 'DateTimeOriginal');
+
+        if (exifDate) {
+            exifDate = exifDate.replace(/^(\d{4}):(\d{2}):(\d{2}).*$/, '$1.$2.$3');
+        } else {
+            // 如果 EXIF 没有，就从文件名解析 YYYY-MM-DD
+            const match = filename.match(/(\d{4})-(\d{2})-(\d{2})/);
+            if (match) {
+                exifDate = `${match[1]}.${match[2]}.${match[3]}`;
+            } else {
+                exifDate = '';
+            }
+        }
+
+        imgElement.setAttribute('data-date', exifDate);
+
+        loadedImages[listIndex] = {
+            src: imgElement.dataset.large,
+            date: exifDate,
+        };
+    });
+
+    imgElement.addEventListener('click', function () {
+        showPopup(
+            imgElement.dataset.large,
+            imgElement.getAttribute('data-date'),
+            listIndex
+        );
+    });
+
+    imgElement.style.cursor = 'pointer';
+    imgElement.classList.add('thumbnail');
+
+    resolve(imgElement);
+}
+
+function showPopup(src, date, indexInList) {
+    currentImageIndex = indexInList;
     const popup = document.getElementById('popup');
     const popupImg = document.getElementById('popupImg');
     const imgDate = document.getElementById('imgDate');
@@ -348,27 +390,29 @@ window.addEventListener('keydown', function (event) {
     }
 });
 
-// 页面加载完成后初始化所有功能
+// 页面加载完成后初始化
 window.onload = function () {
     // 计算恋爱天数
     calculateLoveDays();
-    
+
     // 显示每日情话
     displayQuote(generateDailyQuote());
     startQuoteAutoRotate();
-    
+
     // 渲染时间轴
     renderTimeline();
-    
+
     // 情话按钮事件
-    document.getElementById('newQuoteBtn').addEventListener('click', function() {
+    document.getElementById('newQuoteBtn').addEventListener('click', function () {
         displayQuote(generateRandomQuote());
-        startQuoteAutoRotate(); // 手动切换后重置计时
+        startQuoteAutoRotate();
     });
 
-    // 加载图片
-    loadImages(initialBatchCount).then(() => {
-        window.addEventListener('scroll', handleScroll);
+    // 先加载 image_list.json，再加载图片
+    loadImageList().then(() => {
+        loadImages(initialBatchCount).then(() => {
+            window.addEventListener('scroll', handleScroll);
+        });
     });
 
     document.getElementById('closeBtn').addEventListener('click', closePopup);
