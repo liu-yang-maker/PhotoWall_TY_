@@ -9,7 +9,7 @@ let loadedImages = [];
 let leftArrow;
 let rightArrow;
 
-// 新增：保存所有图片文件名（Python 生成的 image_list.json）
+// 保存所有图片文件名（Python 生成的 image_list.json）
 let imageList = [];
 
 // 情话库
@@ -34,40 +34,47 @@ const loveQuotes = [
     "Choosing to love you is to love you forever!",
 ];
 
-// 时间轴数据
+// 时间轴数据（增加 dateKey 方便和照片联动）
 const timelineData = [
     {
         date: "2025.11.14",
+        dateKey: "2025-11-14",
         title: "我们在上海",
         description: "你是天蝎的脑袋，嘿嘿我是天蝎尾巴，你爱吃点小辣，但是好像也不能吃太辣。我希望你高高兴兴的做自己的事，有自己的事业我当然为你一起骄傲，我想给你兜底是我的选择，但我不想限制你，不想给你什么压力。喜欢花花，喜欢美美的，干干净净的。你喜欢健身，重感情（和我很像，我很心疼，但我也很庆幸遇到的是你。）你喜欢听音乐，看美剧韩剧，我会一个一个补，一首一首听。"
     },
     {
         date: "2025.11.22",
+        dateKey: "2025-11-22",
         title: "我们在在北京，我们正式在一起了",
         description: "今天，我们正式牵起手，往同一个方向走了。谢谢你陪我过生日——带你去吃了我一直想带你去的餐厅，一起喝了Peets Coffee，选了一对简简单单的戒指。我们看了场电影，散了一段长长的步。夜晚的风很轻，路好像没有尽头。"
     },
     {
         date: "2025.12.08",
+        dateKey: "2025-12-08",
         title: "我们在上海",
         description: "和你在一起的这四天，上海好像突然变成了我们的城市。看《疯狂动物城2》的时候，我轻轻叫你“partner”。第二天在外滩，我跟着你走过的路走，悄悄希望你的记忆里从此都有我。第三天在武康路，我...，但你笑着抱住我说“会一直和我在一起”。最后一天去你学校，走着你曾经走过的那些路，我们的未来会很长很坚定。"
     },
     {
         date: "2025.12.12",
+        dateKey: "2025-12-12",
         title: "我们的圣诞主题网页上线",
         description: "https://liu-yang-maker.github.io/Christmas-tree-TY/"
     },
     {
         date: "2025.12.20",
+        dateKey: "2025-12-20",
         title: "我们在上海",
         description: "我们一起看《阿凡达》，打扮圣诞树，冬至一起吃饺子，坐很久的公交漫游上海，也在愚园路的洋房里静静分享一个午后。我带你见了我身边的人，你也慢慢走进我的日常。这个冬天，因为有你，上海变得温暖而踏实。"
     },
     {
         date: "2025.12.29",
+        dateKey: "2025-12-29",
         title: "我们在台州·第一次旅行",
         description: "这是我们第一次一起旅行，也是一起跨年。我们从上海出发，住在温岭海边的民宿，一起看海、爬山、走老街。在麒麟山看日落，在对戒台许愿，在紫阳街吃小吃，在城墙上手牵手走过。虽然有些地方没来得及去，但每一刻都因为你在身边而变得完整。这是我们第一次一起迎接新年，也让我更确信：以后每一年，我都想和你一起度过。"
     },
     {
         date: "2026.01.01",
+        dateKey: "2026-01-01",
         title: "我们在新年·许下约定",
         description: "“去岁千般皆如愿，今年万事定称心。”这是我们第一次一起跨年，你在身边，就是最好的新年礼物。我说了很多心里话，也听你讲了很多过去的故事。我时常担心爱得太快，却又庆幸相遇不晚。我想给你安全感，也想给你全部的我。未来的路还很长，但我想和你一起，一步一步把它走成我们的故事。"
     },
@@ -123,7 +130,36 @@ function startQuoteAutoRotate() {
     }, 30000);
 }
 
-// 渲染时间轴
+// 时间轴和相册联动：根据日期滚动到对应照片
+async function scrollToPhotoByDate(dateKey) {
+    if (!imageList || imageList.length === 0) return;
+    if (!dateKey) return;
+
+    // 找到第一个文件名以 dateKey 开头的图片，比如 "2025-11-22_001.jpg"
+    const targetIndex = imageList.findIndex((name) => name.startsWith(dateKey));
+    if (targetIndex === -1) {
+        console.log('No photo found for dateKey:', dateKey);
+        return;
+    }
+
+    // 如果还没加载到这么靠后的图片，就多加载几批
+    while (index <= targetIndex && index < imageList.length) {
+        // 每次加载一批，直到包含目标索引
+        await loadImages(1);
+    }
+
+    const targetEl = document.querySelector(`img[data-index="${targetIndex}"]`);
+    if (targetEl) {
+        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // 简单高亮一下这张图，配合 CSS 可以做边框/阴影动画
+        targetEl.classList.add('highlight-photo');
+        setTimeout(() => {
+            targetEl.classList.remove('highlight-photo');
+        }, 1500);
+    }
+}
+
+// 渲染时间轴（点击某一条 → 滚动到对应日期的照片）
 function renderTimeline() {
     const timelineContainer = document.getElementById('timelineContainer');
     timelineContainer.innerHTML = '';
@@ -132,10 +168,10 @@ function renderTimeline() {
     line.className = 'timeline-line';
     timelineContainer.appendChild(line);
 
-    timelineData.forEach((item, index) => {
+    timelineData.forEach((item, i) => {
         const timelineItem = document.createElement('div');
         timelineItem.className = 'timeline-item';
-        timelineItem.style.animationDelay = `${index * 0.15}s`;
+        timelineItem.style.animationDelay = `${i * 0.15}s`;
 
         timelineItem.innerHTML = `
             <div class="timeline-content">
@@ -146,6 +182,14 @@ function renderTimeline() {
             <div class="timeline-date">${item.date}</div>
         `;
 
+        // 时间轴点击联动相册
+        timelineItem.style.cursor = 'pointer';
+        timelineItem.addEventListener('click', () => {
+            if (item.dateKey) {
+                scrollToPhotoByDate(item.dateKey);
+            }
+        });
+
         timelineContainer.appendChild(timelineItem);
     });
 
@@ -155,10 +199,9 @@ function renderTimeline() {
     });
 }
 
-// 新增：加载 image_list.json
+// 加载 image_list.json
 async function loadImageList() {
     try {
-        // 加一个时间戳，避免浏览器缓存旧的 json
         const res = await fetch(`images/image_list.json?ts=${Date.now()}`);
         if (!res.ok) {
             console.error('Failed to load image_list.json');
@@ -244,6 +287,7 @@ function loadThumbnail(listIndex) {
     });
 }
 
+// 创建缩略图元素（这里顺便给瀑布流/卡片样式提供 class）
 function createImageElement(thumbImg, listIndex, filename, resolve) {
     const imgElement = document.createElement('img');
     imgElement.dataset.large = `images/${filename}`;
@@ -251,6 +295,9 @@ function createImageElement(thumbImg, listIndex, filename, resolve) {
     imgElement.alt = filename;
     imgElement.setAttribute('data-date', '');
     imgElement.setAttribute('data-index', listIndex);
+
+    // 视觉增强：为 CSS 提供更丰富的 class（圆角、阴影、hover 放大等在 CSS 里做）
+    imgElement.classList.add('thumbnail', 'photo-card');
 
     // 先尝试从 EXIF 读日期
     EXIF.getData(thumbImg, function () {
@@ -285,7 +332,6 @@ function createImageElement(thumbImg, listIndex, filename, resolve) {
     });
 
     imgElement.style.cursor = 'pointer';
-    imgElement.classList.add('thumbnail');
 
     resolve(imgElement);
 }
@@ -399,7 +445,7 @@ window.onload = function () {
     displayQuote(generateDailyQuote());
     startQuoteAutoRotate();
 
-    // 渲染时间轴
+    // 渲染时间轴（带联动）
     renderTimeline();
 
     // 情话按钮事件
