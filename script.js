@@ -120,6 +120,17 @@ function displayQuote(quote) {
     }, 300);
 }
 
+// 自动轮换情话（提升一点动态感）
+let quoteInterval;
+function startQuoteAutoRotate() {
+    if (quoteInterval) {
+        clearInterval(quoteInterval);
+    }
+    quoteInterval = setInterval(() => {
+        displayQuote(generateRandomQuote());
+    }, 30000); // 每 30 秒切换一次
+}
+
 // 渲染时间轴（横向时间轴 + 时间点 + 文本块）
 function renderTimeline() {
     const timelineContainer = document.getElementById('timelineContainer');
@@ -344,6 +355,7 @@ window.onload = function () {
     
     // 显示每日情话
     displayQuote(generateDailyQuote());
+    startQuoteAutoRotate();
     
     // 渲染时间轴
     renderTimeline();
@@ -351,6 +363,7 @@ window.onload = function () {
     // 情话按钮事件
     document.getElementById('newQuoteBtn').addEventListener('click', function() {
         displayQuote(generateRandomQuote());
+        startQuoteAutoRotate(); // 手动切换后重置计时
     });
 
     // 加载图片

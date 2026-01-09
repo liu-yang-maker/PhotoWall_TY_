@@ -11,12 +11,12 @@
     <link rel="manifest" href="readme_img/favicon//site.webmanifest">
 </head>
 <body>
-    <canvas id="heartCanvas"></canvas>
-    <canvas id="starCanvas"></canvas>
+    <!-- 背景特效画布 -->
+    <canvas id="heartCanvas" aria-hidden="true"></canvas>
 
-    <!-- 背景切换按钮 -->
-    <div id="themeToggle" class="theme-toggle">
-        <button id="themeBtn" title="切换背景效果">
+    <!-- 背景切换按钮：在三种效果之间循环切换 -->
+    <div id="themeToggle" class="theme-toggle" aria-label="切换背景效果">
+        <button id="themeBtn" title="切换背景效果（爱心雨 / 星空 / 流星）">
             <span id="themeIcon">💝</span>
         </button>
     </div>
@@ -92,6 +92,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
     <script src="script.js"></script>
     <script src="hearts.js"></script>
+    <script src="stars.js"></script>
+    <script src="meteors.js"></script>
     <script src="starry.js"></script>
 </body>
 </html>
