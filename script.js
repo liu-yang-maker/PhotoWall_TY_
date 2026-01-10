@@ -127,7 +127,7 @@ function startQuoteAutoRotate() {
     }
     quoteInterval = setInterval(() => {
         displayQuote(generateRandomQuote());
-    }, 30000);
+    }, 10000);
 }
 
 // 时间轴和相册联动：根据日期滚动到对应照片
