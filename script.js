@@ -79,6 +79,12 @@ const timelineData = [
         description: "“去岁千般皆如愿，今年万事定称心。”这是我们第一次一起跨年，你在身边，就是最好的新年礼物。我说了很多心里话，也听你讲了很多过去的故事。我时常担心爱得太快，却又庆幸相遇不晚。我想给你安全感，也想给你全部的我。未来的路还很长，但我想和你一起，一步一步把它走成我们的故事。"
     },
     {
+        date: "2026.01.19",
+        dateKey: "2026-01-19",
+        title: "一个羞耻的表白网页上线",
+        description: "https://liu-yang-maker.github.io/love_wxt_in_your_face/"
+    },
+    {
         date: "Our Story",
         dateKey: "2030-01-01",
         title: "我们的故事未完待续，不会结束",
