@@ -85,6 +85,12 @@ const timelineData = [
         description: "https://liu-yang-maker.github.io/love_wxt_in_your_face/"
     },
     {
+        date: "2026.01.30",
+        dateKey: "2026-01-30",
+        title: "我们在上海",
+        description: "在坦诚与谅解中关系深化。我害怕你的犹豫，真心只愿共度此生；你读懂我的不安，放下过往的芥蒂，只求慢慢并肩而行。两次深夜的对话，一次是攥紧的承诺，一次是舒展的包容，用长久的陪伴回答所有关于未来的疑问。"
+    },
+    {
         date: "Our Story",
         dateKey: "2030-01-01",
         title: "我们的故事未完待续，不会结束",
