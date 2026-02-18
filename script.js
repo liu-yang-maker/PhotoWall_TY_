@@ -9,8 +9,25 @@ let loadedImages = [];
 let leftArrow;
 let rightArrow;
 
-// 保存所有图片文件名（Python 生成的 image_list.json）
+// 保存所有媒体文件名（Python 生成的 image_list.json，含图片和视频）
 let imageList = [];
+
+// 视频格式
+const VIDEO_EXTENSIONS = ['.mp4', '.mov', '.webm', '.avi', '.mkv'];
+
+function isVideoFile(filename) {
+    const ext = filename.slice(filename.lastIndexOf('.')).toLowerCase();
+    return VIDEO_EXTENSIONS.includes(ext);
+}
+
+// 视频缩略图路径：视频文件 xxx.mp4 对应 thumbs/xxx.jpg
+function getThumbPath(filename) {
+    if (isVideoFile(filename)) {
+        const base = filename.replace(/\.[^.]+$/, '');
+        return `images/thumbs/${base}.jpg`;
+    }
+    return `images/thumbs/${filename}`;
+}
 
 // 情话库
 const loveQuotes = [
@@ -314,15 +331,24 @@ function loadThumbnail(listIndex) {
         }
 
         const filename = imageList[listIndex];
+        const thumbPath = getThumbPath(filename);
         const thumbImg = new Image();
         thumbImg.crossOrigin = 'Anonymous';
-        thumbImg.src = `images/thumbs/${filename}`;
+        thumbImg.src = thumbPath;
 
         thumbImg.onload = function () {
-            createImageElement(thumbImg, listIndex, filename, resolve);
+            if (isVideoFile(filename)) {
+                resolve(createVideoElement(thumbImg, listIndex, filename));
+            } else {
+                createImageElement(thumbImg, listIndex, filename, resolve);
+            }
         };
 
         thumbImg.onerror = function () {
+            if (isVideoFile(filename)) {
+                resolve(null);
+                return;
+            }
             // 如果缩略图不存在，就直接用原图
             thumbImg.src = `images/${filename}`;
             thumbImg.onload = function () {
@@ -333,6 +359,37 @@ function loadThumbnail(listIndex) {
             };
         };
     });
+}
+
+// 创建视频卡片元素（缩略图 + 点击播放）
+function createVideoElement(thumbImg, listIndex, filename) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'gallery-item video-card';
+
+    const imgElement = document.createElement('img');
+    imgElement.dataset.large = `images/${filename}`;
+    imgElement.src = thumbImg.src;
+    imgElement.alt = filename;
+    imgElement.setAttribute('data-index', listIndex);
+    imgElement.classList.add('thumbnail', 'photo-card', 'video-poster');
+
+    const match = filename.match(/(\d{4})-(\d{2})-(\d{2})/);
+    const exifDate = match ? `${match[1]}.${match[2]}.${match[3]}` : '';
+    imgElement.setAttribute('data-date', exifDate);
+
+    loadedImages[listIndex] = {
+        src: imgElement.dataset.large,
+        date: exifDate,
+        type: 'video',
+    };
+
+    wrapper.appendChild(imgElement);
+    wrapper.addEventListener('click', function () {
+        showPopup(imgElement.dataset.large, exifDate, listIndex, 'video');
+    });
+    wrapper.style.cursor = 'pointer';
+
+    return wrapper;
 }
 
 // 创建缩略图元素（这里顺便给瀑布流/卡片样式提供 class）
@@ -368,6 +425,7 @@ function createImageElement(thumbImg, listIndex, filename, resolve) {
         loadedImages[listIndex] = {
             src: imgElement.dataset.large,
             date: exifDate,
+            type: 'image',
         };
     });
 
@@ -375,7 +433,8 @@ function createImageElement(thumbImg, listIndex, filename, resolve) {
         showPopup(
             imgElement.dataset.large,
             imgElement.getAttribute('data-date'),
-            listIndex
+            listIndex,
+            'image'
         );
     });
 
@@ -384,30 +443,40 @@ function createImageElement(thumbImg, listIndex, filename, resolve) {
     resolve(imgElement);
 }
 
-function showPopup(src, date, indexInList) {
+function showPopup(src, date, indexInList, mediaType = 'image') {
     currentImageIndex = indexInList;
     const popup = document.getElementById('popup');
     const popupImg = document.getElementById('popupImg');
+    const popupVideo = document.getElementById('popupVideo');
     const imgDate = document.getElementById('imgDate');
 
-    popup.style.display = 'block';
+    popup.style.display = 'flex';
 
     popupImg.style.display = 'none';
-    imgDate.innerText = '';
+    popupImg.src = '';
+    popupVideo.style.display = 'none';
+    popupVideo.pause();
+    popupVideo.src = '';
+    imgDate.innerText = date || '';
 
-    const fullImg = new Image();
-    fullImg.crossOrigin = 'Anonymous';
-    fullImg.src = src;
+    if (mediaType === 'video') {
+        popupVideo.src = src;
+        popupVideo.style.display = 'block';
+        popupVideo.load();
+    } else {
+        const fullImg = new Image();
+        fullImg.crossOrigin = 'Anonymous';
+        fullImg.src = src;
 
-    fullImg.onload = function () {
-        popupImg.src = src;
-        popupImg.style.display = 'block';
-        imgDate.innerText = date;
-    };
+        fullImg.onload = function () {
+            popupImg.src = src;
+            popupImg.style.display = 'block';
+        };
 
-    fullImg.onerror = function () {
-        imgDate.innerText = 'Load failed';
-    };
+        fullImg.onerror = function () {
+            imgDate.innerText = 'Load failed';
+        };
+    }
 
     leftArrow.style.display = 'flex';
     rightArrow.style.display = 'flex';
@@ -428,9 +497,14 @@ function showPopup(src, date, indexInList) {
 function closePopup() {
     const popup = document.getElementById('popup');
     const popupImg = document.getElementById('popupImg');
+    const popupVideo = document.getElementById('popupVideo');
     const imgDate = document.getElementById('imgDate');
     popup.style.display = 'none';
     popupImg.src = '';
+    popupImg.style.display = 'none';
+    popupVideo.pause();
+    popupVideo.src = '';
+    popupVideo.style.display = 'none';
     imgDate.innerText = '';
 
     leftArrow.style.display = 'none';
@@ -453,7 +527,7 @@ function showPreviousImage() {
         if (loadedImages[prevIndex]) {
             currentImageIndex = prevIndex;
             const imgData = loadedImages[prevIndex];
-            showPopup(imgData.src, imgData.date, prevIndex);
+            showPopup(imgData.src, imgData.date, prevIndex, imgData.type || 'image');
         } else {
             leftArrow.classList.add('disabled');
         }
@@ -465,7 +539,7 @@ function showNextImage() {
     if (loadedImages[nextIndex]) {
         currentImageIndex = nextIndex;
         const imgData = loadedImages[nextIndex];
-        showPopup(imgData.src, imgData.date, nextIndex);
+        showPopup(imgData.src, imgData.date, nextIndex, imgData.type || 'image');
     } else {
         rightArrow.classList.add('disabled');
     }
