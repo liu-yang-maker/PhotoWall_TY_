@@ -461,6 +461,8 @@ function showPopup(src, date, indexInList, mediaType = 'image') {
 
     if (mediaType === 'video') {
         popupVideo.src = src;
+        popupVideo.muted = false;
+        popupVideo.volume = 1;
         popupVideo.style.display = 'block';
         popupVideo.load();
     } else {
