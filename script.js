@@ -20,6 +20,10 @@ function isVideoFile(filename) {
     return VIDEO_EXTENSIONS.includes(ext);
 }
 
+// 视频缩略图加载失败时的占位图（灰色背景 + 播放图标）
+const VIDEO_PLACEHOLDER =
+    "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Crect fill='%23e8e8e8' width='180' height='180'/%3E%3Ctext x='50%25' y='50%25' fill='%23aaa' font-size='36' text-anchor='middle' dy='.35em' font-family='sans-serif'%3E▶%3C/text%3E%3C/svg%3E";
+
 // 视频缩略图路径：视频文件 xxx.mp4 对应 thumbs/xxx.jpg
 function getThumbPath(filename) {
     if (isVideoFile(filename)) {
@@ -346,7 +350,15 @@ function loadThumbnail(listIndex) {
 
         thumbImg.onerror = function () {
             if (isVideoFile(filename)) {
-                resolve(null);
+                // 视频缩略图失败时使用占位图，确保小图位置仍有显示
+                const placeholderImg = new Image();
+                placeholderImg.src = VIDEO_PLACEHOLDER;
+                placeholderImg.onload = function () {
+                    resolve(createVideoElement(placeholderImg, listIndex, filename));
+                };
+                placeholderImg.onerror = function () {
+                    resolve(null);
+                };
                 return;
             }
             // 如果缩略图不存在，就直接用原图
