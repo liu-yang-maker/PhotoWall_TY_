@@ -24,13 +24,69 @@ function isVideoFile(filename) {
 const VIDEO_PLACEHOLDER =
     "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Crect fill='%23e8e8e8' width='180' height='180'/%3E%3Ctext x='50%25' y='50%25' fill='%23aaa' font-size='36' text-anchor='middle' dy='.35em' font-family='sans-serif'%3E▶%3C/text%3E%3C/svg%3E";
 
-// 视频缩略图路径：视频文件 xxx.mp4 对应 thumbs/xxx.jpg
+// 视频缩略图路径：图片用 thumbs，视频在浏览器内从第一帧提取
 function getThumbPath(filename) {
     if (isVideoFile(filename)) {
-        const base = filename.replace(/\.[^.]+$/, '');
-        return `images/thumbs/${base}.jpg`;
+        return null; // 视频不从这里取，由 extractVideoFirstFrame 处理
     }
     return `images/thumbs/${filename}`;
+}
+
+// 从视频第一帧提取缩略图（纯前端，无需 step2 预生成）
+function extractVideoFirstFrame(filename, listIndex, resolve) {
+    const videoSrc = `images/${filename}`;
+    const video = document.createElement('video');
+    video.muted = true;
+    video.preload = 'metadata';
+    video.playsInline = true;
+    video.crossOrigin = 'anonymous';
+
+    const fallbackToPlaceholder = () => {
+        const placeholderImg = new Image();
+        placeholderImg.src = VIDEO_PLACEHOLDER;
+        placeholderImg.onload = () =>
+            resolve(createVideoElement(placeholderImg, listIndex, filename));
+        placeholderImg.onerror = () => resolve(null);
+    };
+
+    video.addEventListener('seeked', function onSeeked() {
+        video.removeEventListener('seeked', onSeeked);
+        video.removeEventListener('error', onError);
+        try {
+            const w = video.videoWidth;
+            const h = video.videoHeight;
+            if (w <= 0 || h <= 0) {
+                fallbackToPlaceholder();
+                return;
+            }
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+            video.src = '';
+            video.load();
+            const thumbImg = new Image();
+            thumbImg.src = dataUrl;
+            thumbImg.onload = () =>
+                resolve(createVideoElement(thumbImg, listIndex, filename));
+            thumbImg.onerror = fallbackToPlaceholder;
+        } catch (e) {
+            fallbackToPlaceholder();
+        }
+    });
+
+    const onError = () => {
+        video.removeEventListener('seeked', onSeeked);
+        video.removeEventListener('error', onError);
+        video.src = '';
+        fallbackToPlaceholder();
+    };
+    video.addEventListener('error', onError);
+
+    video.src = videoSrc;
+    video.currentTime = 0;
 }
 
 // 情话库
@@ -335,33 +391,24 @@ function loadThumbnail(listIndex) {
         }
 
         const filename = imageList[listIndex];
+
+        // 视频：从前端提取第一帧作为缩略图
+        if (isVideoFile(filename)) {
+            extractVideoFirstFrame(filename, listIndex, resolve);
+            return;
+        }
+
+        // 图片：从 thumbs 或原图加载
         const thumbPath = getThumbPath(filename);
         const thumbImg = new Image();
         thumbImg.crossOrigin = 'Anonymous';
         thumbImg.src = thumbPath;
 
         thumbImg.onload = function () {
-            if (isVideoFile(filename)) {
-                resolve(createVideoElement(thumbImg, listIndex, filename));
-            } else {
-                createImageElement(thumbImg, listIndex, filename, resolve);
-            }
+            createImageElement(thumbImg, listIndex, filename, resolve);
         };
 
         thumbImg.onerror = function () {
-            if (isVideoFile(filename)) {
-                // 视频缩略图失败时使用占位图，确保小图位置仍有显示
-                const placeholderImg = new Image();
-                placeholderImg.src = VIDEO_PLACEHOLDER;
-                placeholderImg.onload = function () {
-                    resolve(createVideoElement(placeholderImg, listIndex, filename));
-                };
-                placeholderImg.onerror = function () {
-                    resolve(null);
-                };
-                return;
-            }
-            // 如果缩略图不存在，就直接用原图
             thumbImg.src = `images/${filename}`;
             thumbImg.onload = function () {
                 createImageElement(thumbImg, listIndex, filename, resolve);
