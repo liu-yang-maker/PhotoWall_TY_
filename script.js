@@ -1,9 +1,4 @@
 const imageContainer = document.getElementById('gallery');
-let index = 0;
-let loading = false;
-const batchSize = 10;
-const initialBatchCount = 5;
-const scrolldistance = 1000;
 let currentImageIndex = 0;
 let loadedImages = [];
 let leftArrow;
@@ -41,17 +36,25 @@ function extractVideoFirstFrame(filename, listIndex, resolve) {
     video.playsInline = true;
     video.crossOrigin = 'anonymous';
 
+    let done = false;
+    const doResolve = (val) => {
+        if (done) return;
+        done = true;
+        resolve(val);
+    };
+
     const fallbackToPlaceholder = () => {
         const placeholderImg = new Image();
         placeholderImg.src = VIDEO_PLACEHOLDER;
         placeholderImg.onload = () =>
-            resolve(createVideoElement(placeholderImg, listIndex, filename));
-        placeholderImg.onerror = () => resolve(null);
+            doResolve(createVideoElement(placeholderImg, listIndex, filename));
+        placeholderImg.onerror = () => doResolve(null);
     };
 
-    video.addEventListener('seeked', function onSeeked() {
+    const onSeeked = function () {
         video.removeEventListener('seeked', onSeeked);
         video.removeEventListener('error', onError);
+        clearTimeout(timeoutId);
         try {
             const w = video.videoWidth;
             const h = video.videoHeight;
@@ -70,20 +73,29 @@ function extractVideoFirstFrame(filename, listIndex, resolve) {
             const thumbImg = new Image();
             thumbImg.src = dataUrl;
             thumbImg.onload = () =>
-                resolve(createVideoElement(thumbImg, listIndex, filename));
+                doResolve(createVideoElement(thumbImg, listIndex, filename));
             thumbImg.onerror = fallbackToPlaceholder;
         } catch (e) {
             fallbackToPlaceholder();
         }
-    });
+    };
 
     const onError = () => {
         video.removeEventListener('seeked', onSeeked);
         video.removeEventListener('error', onError);
+        clearTimeout(timeoutId);
         video.src = '';
         fallbackToPlaceholder();
     };
+    video.addEventListener('seeked', onSeeked);
     video.addEventListener('error', onError);
+
+    const timeoutId = setTimeout(() => {
+        video.removeEventListener('seeked', onSeeked);
+        video.removeEventListener('error', onError);
+        video.src = '';
+        fallbackToPlaceholder();
+    }, 8000);
 
     video.src = videoSrc;
     video.currentTime = 0;
@@ -256,22 +268,12 @@ function startQuoteAutoRotate() {
 }
 
 // 时间轴和相册联动：根据日期滚动到对应照片
-async function scrollToPhotoByDate(dateKey) {
+function scrollToPhotoByDate(dateKey) {
     if (!imageList || imageList.length === 0) return;
     if (!dateKey) return;
 
-    // 找到第一个文件名以 dateKey 开头的图片，比如 "2025-11-22_001.jpg"
     const targetIndex = imageList.findIndex((name) => name.startsWith(dateKey));
-    if (targetIndex === -1) {
-        console.log('No photo found for dateKey:', dateKey);
-        return;
-    }
-
-    // 如果还没加载到这么靠后的图片，就多加载几批
-    while (index <= targetIndex && index < imageList.length) {
-        // 每次加载一批，直到包含目标索引
-        await loadImages(1);
-    }
+    if (targetIndex === -1) return;
 
     const targetEl = document.querySelector(`img[data-index="${targetIndex}"]`);
     if (targetEl) {
@@ -343,44 +345,19 @@ async function loadImageList() {
     }
 }
 
-// 图片加载相关函数
-async function loadImages(batchCount = 1) {
-    if (loading) return;
-    if (!imageList || imageList.length === 0) {
-        console.log('No images to load.');
-        return;
-    }
-
-    loading = true;
-
-    for (let b = 0; b < batchCount; b++) {
-        const batchPromises = [];
-
-        for (let i = 0; i < batchSize; i++) {
-            if (index >= imageList.length) break;
-            batchPromises.push(loadThumbnail(index));
-            index++;
-        }
-
-        if (batchPromises.length === 0) {
-            break;
-        }
-
-        const results = await Promise.all(batchPromises);
-
-        results.forEach((img) => {
-            if (img) imageContainer.appendChild(img);
+// 加载全部图片（用 allSettled 避免单个失败导致全部不显示）
+async function loadAllImages() {
+    if (!imageList || imageList.length === 0) return;
+    try {
+        const results = await Promise.allSettled(
+            imageList.map((_, i) => loadThumbnail(i))
+        );
+        results.forEach((r) => {
+            if (r.status === 'fulfilled' && r.value) imageContainer.appendChild(r.value);
         });
-
-        const loadMore = results.some((img) => img);
-
-        if (!loadMore || index >= imageList.length) {
-            window.removeEventListener('scroll', handleScroll);
-            console.log('All images have been loaded and displayed.');
-            break;
-        }
+    } catch (e) {
+        console.error('loadAllImages error:', e);
     }
-    loading = false;
 }
 
 function loadThumbnail(listIndex) {
@@ -398,20 +375,27 @@ function loadThumbnail(listIndex) {
             return;
         }
 
-        // 图片：从 thumbs 或原图加载
+        // 图片：从 thumbs 或原图加载（不设 crossOrigin，避免本地/同源加载异常）
         const thumbPath = getThumbPath(filename);
         const thumbImg = new Image();
-        thumbImg.crossOrigin = 'Anonymous';
         thumbImg.src = thumbPath;
 
         thumbImg.onload = function () {
-            createImageElement(thumbImg, listIndex, filename, resolve);
+            try {
+                createImageElement(thumbImg, listIndex, filename, resolve);
+            } catch (e) {
+                resolve(null);
+            }
         };
 
         thumbImg.onerror = function () {
             thumbImg.src = `images/${filename}`;
             thumbImg.onload = function () {
-                createImageElement(thumbImg, listIndex, filename, resolve);
+                try {
+                    createImageElement(thumbImg, listIndex, filename, resolve);
+                } catch (e) {
+                    resolve(null);
+                }
             };
             thumbImg.onerror = function () {
                 resolve(null);
@@ -572,16 +556,6 @@ function closePopup() {
     rightArrow.style.display = 'none';
 }
 
-function handleScroll() {
-    const scrollTop = window.scrollY;
-    const windowHeight = window.innerHeight;
-    const documentHeight = document.documentElement.scrollHeight;
-
-    if (scrollTop + windowHeight >= documentHeight - scrolldistance) {
-        loadImages();
-    }
-}
-
 function showPreviousImage() {
     const prevIndex = currentImageIndex - 1;
     if (prevIndex >= 0) {
@@ -637,21 +611,14 @@ window.onload = function () {
         startQuoteAutoRotate();
     });
 
-    // 先加载 image_list.json，再加载图片
-    loadImageList().then(() => {
-        loadImages(initialBatchCount).then(() => {
-            window.addEventListener('scroll', handleScroll);
-        });
-    });
+    loadImageList().then(loadAllImages);
 
     document.getElementById('closeBtn').addEventListener('click', closePopup);
 
     leftArrow = document.getElementById('leftArrow');
     rightArrow = document.getElementById('rightArrow');
-
     leftArrow.addEventListener('click', showPreviousImage);
     rightArrow.addEventListener('click', showNextImage);
-
     leftArrow.style.display = 'none';
     rightArrow.style.display = 'none';
 };
