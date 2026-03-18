@@ -70,6 +70,14 @@
             </div>
         </section>
 
+        <!-- 互动小票（Three.js + Verlet 纸张模拟） -->
+        <section id="receiptStage" aria-label="Interactive receipt">
+            <div class="receipt-shell">
+                <div class="receipt-hint">按住小票任意位置拖拽，可弯曲、折叠并自然回弹</div>
+                <div id="receiptMount" class="receipt-mount"></div>
+            </div>
+        </section>
+
         <section id="gallery">
         </section>
     </main>
@@ -92,6 +100,8 @@
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.min.js"></script>
     <script src="script.js"></script>
+    <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+    <script src="receipt.js"></script>
     <script src="hearts.js"></script>
     <script src="stars.js"></script>
     <script src="meteors.js"></script>
