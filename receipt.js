@@ -85,7 +85,7 @@
     const q = RECEIPT_QUOTES[Math.floor(Math.random() * RECEIPT_QUOTES.length)];
     ctx.textAlign = 'left';
     ctx.fillStyle = 'rgba(0,0,0,0.78)';
-    ctx.font = '600 54px Pacifico, cursive';
+    ctx.font = '600 54px "Great Vibes", "Ma Shan Zheng", cursive';
     const lines = q.split('\n');
     let y = 390;
     for (const line of lines) {

@@ -4,13 +4,22 @@
     <meta charset="UTF-8">
     <title>Our Love Journey</title>
     <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Pacifico&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Great+Vibes&family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
     <link rel="apple-touch-icon" sizes="180x180" href="readme_img/favicon/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="readme_img/favicon/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="readme_img/favicon/favicon-16x16.png">
     <link rel="manifest" href="readme_img/favicon/site.webmanifest">
 </head>
 <body>
+    <!-- 页面加载动画 -->
+    <div id="loadingScreen" class="loading-screen">
+        <div class="loading-hearts">
+            <span class="loading-heart loading-heart-left">&hearts;</span>
+            <span class="loading-heart loading-heart-right">&hearts;</span>
+        </div>
+        <p class="loading-text">Loading our story...</p>
+    </div>
+
     <!-- 背景特效画布 -->
     <canvas id="heartCanvas" aria-hidden="true"></canvas>
 
@@ -27,38 +36,63 @@
         </div>
     </nav>
 
-    <main>
-        <section id="name">
-            <h2>Xiaotong 晓彤 & Yang 洋</h2>
-        </section>
+    <!-- 自定义音乐播放器 -->
+    <div id="musicPlayer" class="music-player">
+        <div class="vinyl-disc" id="vinylDisc">
+            <div class="vinyl-inner"></div>
+        </div>
+        <button id="musicToggle" class="music-toggle" title="播放/暂停音乐">
+            <span id="musicIcon">&#9654;</span>
+        </button>
+        <audio id="bgm" src="music/music1.mp3"></audio>
+    </div>
 
-        <section id="timer">
-            <audio id="bgm" src="music/music1.mp3" controls></audio>
-            <p>We have been in love for</p>
-            <h2><span id="loveDays">0</span> Days</h2>
+    <main>
+        <section id="hero">
+            <div class="hero-content">
+                <h2 class="hero-names">
+                    <span class="name-left">Xiaotong 晓彤</span>
+                    <span class="heart-amp">&hearts;</span>
+                    <span class="name-right">Yang 洋</span>
+                </h2>
+                <div class="love-counter">
+                    <p class="love-label">We have been in love for</p>
+                    <div class="days-display">
+                        <span id="loveDays" class="days-number">0</span>
+                        <span class="days-text">Days</span>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <!-- 每日情话生成器 -->
         <section id="loveQuote">
             <div class="quote-container">
-                <div class="quote-icon">💕</div>
+                <span class="quote-deco quote-deco-left">&ldquo;</span>
+                <span class="quote-deco quote-deco-right">&rdquo;</span>
                 <p id="quoteText">Loading...</p>
                 <button id="newQuoteBtn" class="quote-btn">换一句情话</button>
             </div>
         </section>
 
         <section id="dates">
-            <div class="date-item">
+            <div class="date-item" data-month="10" data-day="24">
+                <div class="date-icon">&#127810;</div>
                 <p>1998.10.24</p>
                 <span>Her Birthday</span>
+                <div class="countdown-text"></div>
             </div>
-            <div class="date-item">
+            <div class="date-item" data-month="11" data-day="22">
+                <div class="date-icon">&#127811;</div>
                 <p>1997.11.22</p>
                 <span>His Birthday</span>
+                <div class="countdown-text"></div>
             </div>
-            <div class="date-item">
+            <div class="date-item" data-month="11" data-day="22">
+                <div class="date-icon">&#128141;</div>
                 <p>2025.11.22</p>
                 <span>Anniversary</span>
+                <div class="countdown-text"></div>
             </div>
         </section>
 
@@ -83,8 +117,9 @@
     </main>
 
     <footer>
-        <div class="container">
-            <p>&copy; Written by <a href="https://github.com/liu-yang-maker" target="_blank">liu-yang-maker</a>. Enhanced with ❤️ between Tong and Yang</p>
+        <div class="container footer-content">
+            <p class="footer-love">Made with all my love, for you</p>
+            <p class="footer-credit">&copy; <a href="https://github.com/liu-yang-maker" target="_blank">liu-yang-maker</a></p>
         </div>
     </footer>
 
@@ -94,6 +129,16 @@
         <img id="popupImg" src="" alt="Large Image">
         <video id="popupVideo" controls playsinline style="display:none;"></video>
     </div>
+
+    <!-- 侧边导航锚点 -->
+    <nav id="sideNav" class="side-nav">
+        <a href="#hero" class="side-nav-dot active" data-section="hero" title="Home"></a>
+        <a href="#loveQuote" class="side-nav-dot" data-section="loveQuote" title="Love Quote"></a>
+        <a href="#dates" class="side-nav-dot" data-section="dates" title="Dates"></a>
+        <a href="#timeline" class="side-nav-dot" data-section="timeline" title="Timeline"></a>
+        <a href="#receiptStage" class="side-nav-dot" data-section="receiptStage" title="Receipt"></a>
+        <a href="#gallery" class="side-nav-dot" data-section="gallery" title="Gallery"></a>
+    </nav>
 
     <div id="leftArrow" class="arrow">◄</div>
     <div id="rightArrow" class="arrow">►</div>

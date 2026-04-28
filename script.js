@@ -260,17 +260,30 @@ function generateRandomQuote() {
     return loveQuotes[randomIndex];
 }
 
-// 显示情话
+// 显示情话（打字机效果）
+let typewriterTimer = null;
 function displayQuote(quote) {
     const quoteText = document.getElementById('quoteText');
+    if (typewriterTimer) clearInterval(typewriterTimer);
+
     quoteText.style.opacity = '0';
     quoteText.style.transform = 'translateY(10px)';
 
     setTimeout(() => {
-        quoteText.innerText = quote;
         quoteText.style.opacity = '1';
         quoteText.style.transform = 'translateY(0)';
-        quoteText.style.transition = 'all 0.5s ease';
+        quoteText.style.transition = 'all 0.4s ease';
+        quoteText.innerText = '';
+        let i = 0;
+        typewriterTimer = setInterval(() => {
+            if (i < quote.length) {
+                quoteText.innerText += quote[i];
+                i++;
+            } else {
+                clearInterval(typewriterTimer);
+                typewriterTimer = null;
+            }
+        }, 60);
     }, 300);
 }
 
@@ -600,7 +613,7 @@ function showNextImage() {
 
 window.addEventListener('keydown', function (event) {
     const popup = document.getElementById('popup');
-    if (popup.style.display === 'block') {
+    if (popup.style.display === 'flex' || popup.style.display === 'block') {
         if (event.key === 'ArrowLeft') {
             showPreviousImage();
         } else if (event.key === 'ArrowRight') {
@@ -611,10 +624,240 @@ window.addEventListener('keydown', function (event) {
     }
 });
 
+// 纪念日倒计时
+function updateCountdowns() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const currentYear = today.getFullYear();
+
+    document.querySelectorAll('.date-item').forEach(item => {
+        const month = parseInt(item.getAttribute('data-month'));
+        const day = parseInt(item.getAttribute('data-day'));
+        const countdownEl = item.querySelector('.countdown-text');
+        if (!month || !day || !countdownEl) return;
+
+        let nextDate = new Date(currentYear, month - 1, day);
+        nextDate.setHours(0, 0, 0, 0);
+        if (nextDate < today) {
+            nextDate = new Date(currentYear + 1, month - 1, day);
+        }
+
+        const diff = Math.ceil((nextDate - today) / (1000 * 60 * 60 * 24));
+        if (diff === 0) {
+            countdownEl.textContent = 'Today!';
+            item.classList.add('is-today');
+        } else {
+            countdownEl.textContent = diff + ' days to go';
+        }
+    });
+}
+
+// 自定义音乐播放器
+function initMusicPlayer() {
+    const bgm = document.getElementById('bgm');
+    const toggleBtn = document.getElementById('musicToggle');
+    const icon = document.getElementById('musicIcon');
+    const vinyl = document.getElementById('vinylDisc');
+    let isPlaying = false;
+
+    toggleBtn.addEventListener('click', function () {
+        if (isPlaying) {
+            bgm.pause();
+            icon.innerHTML = '&#9654;';
+            vinyl.classList.remove('spinning');
+        } else {
+            bgm.play();
+            icon.innerHTML = '&#9646;&#9646;';
+            vinyl.classList.add('spinning');
+        }
+        isPlaying = !isPlaying;
+    });
+
+    bgm.addEventListener('ended', function () {
+        bgm.currentTime = 0;
+        bgm.play();
+    });
+}
+
+// 滚动进入动画 (Intersection Observer)
+function initScrollReveal() {
+    const sections = document.querySelectorAll('#loveQuote, #dates, #timeline, #receiptStage, #gallery');
+    sections.forEach(s => s.classList.add('scroll-reveal'));
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                entry.target.classList.add('revealed');
+                observer.unobserve(entry.target);
+            }
+        });
+    }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+
+    sections.forEach(s => observer.observe(s));
+}
+
+// ===== 爱心互动彩蛋 =====
+
+// 双击弹出甜蜜语录气泡
+const bubbleQuotes = [
+    "想你了", "抱抱你", "你最好看", "永远喜欢你", "你是我的小太阳",
+    "今天也爱你", "mua~", "你笑起来真好看", "一直在你身边", "我的宝贝",
+    "You are my everything", "Forever yours"
+];
+
+function initDoubleTapBubble() {
+    document.addEventListener('dblclick', function (e) {
+        // 不在弹窗或按钮上触发
+        if (e.target.closest('#popup') || e.target.closest('button') || e.target.closest('a')) return;
+
+        const bubble = document.createElement('div');
+        bubble.className = 'love-bubble';
+        bubble.textContent = bubbleQuotes[Math.floor(Math.random() * bubbleQuotes.length)];
+        bubble.style.left = Math.min(e.clientX - 40, window.innerWidth - 280) + 'px';
+        bubble.style.top = (e.clientY - 20) + 'px';
+        document.body.appendChild(bubble);
+        setTimeout(() => bubble.remove(), 2600);
+    });
+}
+
+// 隐藏烟花彩蛋 (连续快速点击 5 次触发)
+let rapidClickCount = 0;
+let rapidClickTimer = null;
+
+function initFireworkEasterEgg() {
+    document.addEventListener('click', function () {
+        rapidClickCount++;
+        if (rapidClickTimer) clearTimeout(rapidClickTimer);
+        rapidClickTimer = setTimeout(() => { rapidClickCount = 0; }, 800);
+
+        if (rapidClickCount >= 5) {
+            rapidClickCount = 0;
+            launchFireworks();
+        }
+    });
+}
+
+function launchFireworks() {
+    const canvas = document.createElement('canvas');
+    canvas.className = 'firework-canvas';
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    document.body.appendChild(canvas);
+
+    const textEl = document.createElement('div');
+    textEl.className = 'firework-text';
+    textEl.textContent = 'I Love You Forever';
+    document.body.appendChild(textEl);
+
+    const ctx = canvas.getContext('2d');
+    const particles = [];
+    const colors = ['#ff6f61', '#b76e79', '#c9b1ff', '#ffb6c1', '#ffeaa7', '#ff6b81', '#fab1a0'];
+
+    // 创建多波烟花
+    function burst(x, y) {
+        const count = 60 + Math.floor(Math.random() * 40);
+        for (let i = 0; i < count; i++) {
+            const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.3;
+            const speed = 2 + Math.random() * 4;
+            particles.push({
+                x, y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                life: 1,
+                decay: 0.012 + Math.random() * 0.01,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                size: 2 + Math.random() * 2
+            });
+        }
+    }
+
+    // 发射多波
+    burst(canvas.width * 0.3, canvas.height * 0.35);
+    burst(canvas.width * 0.7, canvas.height * 0.3);
+    setTimeout(() => burst(canvas.width * 0.5, canvas.height * 0.25), 300);
+    setTimeout(() => burst(canvas.width * 0.2, canvas.height * 0.4), 600);
+    setTimeout(() => burst(canvas.width * 0.8, canvas.height * 0.35), 600);
+
+    let frame;
+    function animate() {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.08)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const p = particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.vy += 0.04; // gravity
+            p.vx *= 0.99;
+            p.life -= p.decay;
+
+            if (p.life <= 0) {
+                particles.splice(i, 1);
+                continue;
+            }
+
+            ctx.globalAlpha = p.life;
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
+        if (particles.length > 0) {
+            frame = requestAnimationFrame(animate);
+        } else {
+            cancelAnimationFrame(frame);
+            canvas.remove();
+            textEl.style.transition = 'opacity 1s';
+            textEl.style.opacity = '0';
+            setTimeout(() => textEl.remove(), 1000);
+        }
+    }
+    animate();
+}
+
+// 侧边导航滚动高亮
+function initSideNav() {
+    const dots = document.querySelectorAll('.side-nav-dot');
+    const sectionIds = Array.from(dots).map(d => d.getAttribute('data-section'));
+
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (entry.isIntersecting) {
+                const id = entry.target.id;
+                dots.forEach(d => d.classList.remove('active'));
+                const active = document.querySelector(`.side-nav-dot[data-section="${id}"]`);
+                if (active) active.classList.add('active');
+            }
+        });
+    }, { threshold: 0.3, rootMargin: '-80px 0px -40% 0px' });
+
+    sectionIds.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) observer.observe(el);
+    });
+}
+
+// 隐藏加载动画
+function hideLoadingScreen() {
+    const loading = document.getElementById('loadingScreen');
+    if (loading) {
+        loading.classList.add('fade-out');
+        setTimeout(() => { loading.style.display = 'none'; }, 800);
+    }
+}
+
 // 页面加载完成后初始化
 window.onload = function () {
+    // 隐藏加载动画
+    hideLoadingScreen();
+
     // 计算恋爱天数
     calculateLoveDays();
+
+    // 纪念日倒计时
+    updateCountdowns();
 
     // 显示每日情话
     displayQuote(generateDailyQuote());
@@ -622,6 +865,19 @@ window.onload = function () {
 
     // 渲染时间轴（带联动）
     renderTimeline();
+
+    // 自定义音乐播放器
+    initMusicPlayer();
+
+    // 滚动进入动画
+    initScrollReveal();
+
+    // 侧边导航
+    initSideNav();
+
+    // 互动彩蛋
+    initDoubleTapBubble();
+    initFireworkEasterEgg();
 
     // 情话按钮事件
     document.getElementById('newQuoteBtn').addEventListener('click', function () {
