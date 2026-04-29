@@ -488,67 +488,102 @@ main {
 
 /* ===== 照片墙 - Polaroid 风格 ===== */
 #gallery {
+    padding: 20px 0 0;
+    text-align: center;
+}
+
+.gallery-grid {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    padding: 20px 0 0;
     gap: 4px;
 }
 
-#gallery img,
-#gallery .gallery-item.video-card {
+/* 日期分组 */
+.gallery-date-separator {
+    width: 100%;
+    text-align: center;
+    padding: 28px 0 14px;
+    position: relative;
+}
+
+.gallery-date-separator::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--rose-gold-light), transparent);
+}
+
+.date-separator-text {
+    position: relative;
+    background: linear-gradient(135deg, var(--bg-start), var(--bg-end));
+    padding: 0 20px;
+    font-family: 'Great Vibes', cursive;
+    font-size: 22px;
+    color: var(--rose-gold);
+    letter-spacing: 1px;
+}
+
+.gallery-date-group {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
+}
+
+/* Polaroid 卡片 */
+.polaroid {
     background: white;
-    padding: 8px 8px 32px 8px;
+    padding: 8px 8px 4px 8px;
     border-radius: 4px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
     position: relative;
+    display: inline-block;
+    text-align: center;
+    cursor: pointer;
 }
 
-#gallery img {
+.polaroid img {
     width: 160px;
     height: 160px;
     object-fit: cover;
-    margin: 0;
     border-radius: 2px;
-    opacity: 1;
+    display: block;
 }
 
-#gallery img:hover {
-    transform: rotate(0deg) translateY(-12px) scale(1.05);
+.polaroid-date {
+    display: block;
+    font-family: 'Great Vibes', cursive;
+    font-size: 13px;
+    color: var(--rose-gold);
+    padding: 5px 0 3px;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+/* 拍立得随机旋转效果（class-based，不受分组重置） */
+.polaroid.rot-a { transform: rotate(-2deg); }
+.polaroid.rot-b { transform: rotate(1.5deg); }
+.polaroid.rot-c { transform: rotate(-1deg); }
+.polaroid.rot-d { transform: rotate(2.5deg); }
+.polaroid.rot-e { transform: rotate(-3deg); }
+
+.polaroid:hover {
+    transform: rotate(0deg) translateY(-12px) scale(1.05) !important;
     box-shadow: 0 20px 40px rgba(183, 110, 121, 0.25);
-    cursor: pointer;
     z-index: 2;
 }
 
-/* 拍立得随机旋转效果 */
-#gallery img:nth-child(3n+1) { transform: rotate(-2deg); }
-#gallery img:nth-child(3n+2) { transform: rotate(1.5deg); }
-#gallery img:nth-child(3n) { transform: rotate(-1deg); }
-#gallery img:nth-child(5n+1) { transform: rotate(2.5deg); }
-#gallery img:nth-child(7n) { transform: rotate(-3deg); }
-
-/* 视频卡片 */
-#gallery .gallery-item.video-card {
-    width: 176px;
-    height: auto;
-    margin: 0;
-    overflow: visible;
-}
-
-#gallery .gallery-item.video-card img {
-    width: 160px;
-    height: 160px;
-    padding: 0;
-    margin: 0;
-    box-shadow: none;
-    background: none;
-}
-
-#gallery .gallery-item.video-card::after {
+/* 视频卡片播放按钮 */
+.polaroid.video-card::after {
     content: '\25B6';
     position: absolute;
-    top: calc(50% - 12px);
+    top: calc(50% - 10px);
     left: 50%;
     transform: translate(-50%, -50%);
     font-size: 36px;
@@ -557,16 +592,59 @@ main {
     pointer-events: none;
 }
 
-#gallery .gallery-item.video-card:hover {
-    transform: rotate(0deg) translateY(-12px) scale(1.05);
-    box-shadow: 0 20px 40px rgba(183, 110, 121, 0.25);
-    cursor: pointer;
+/* 骨架屏占位 */
+.gallery-skeleton {
+    background: white;
+    padding: 8px 8px 4px 8px;
+    border-radius: 4px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    display: inline-block;
+    text-align: center;
 }
 
-#gallery .gallery-item.video-card:hover img {
-    transform: none;
-    box-shadow: none;
+.skeleton-img {
+    width: 160px;
+    height: 160px;
+    border-radius: 2px;
+    background: linear-gradient(110deg, #f5f0f0 25%, #ece6e6 37%, #f5f0f0 63%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
 }
+
+.skeleton-date {
+    display: block;
+    width: 50%;
+    height: 12px;
+    margin: 7px auto 5px;
+    border-radius: 6px;
+    background: linear-gradient(110deg, #f5f0f0 25%, #ece6e6 37%, #f5f0f0 63%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* 入场动画 */
+.gallery-fade-in {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.gallery-fade-in.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* 旋转 + 入场动画同时生效 */
+.gallery-fade-in.visible.rot-a { transform: rotate(-2deg); }
+.gallery-fade-in.visible.rot-b { transform: rotate(1.5deg); }
+.gallery-fade-in.visible.rot-c { transform: rotate(-1deg); }
+.gallery-fade-in.visible.rot-d { transform: rotate(2.5deg); }
+.gallery-fade-in.visible.rot-e { transform: rotate(-3deg); }
 
 /* 照片高亮动画（时间轴联动） */
 .highlight-photo {
@@ -1104,18 +1182,21 @@ footer {
         font-size: 12px;
     }
 
-    #gallery img {
+    .polaroid img {
         width: 130px;
         height: 130px;
-        padding: 6px 6px 24px 6px;
     }
 
-    #gallery .gallery-item.video-card {
-        width: 148px;
+    .polaroid-date {
+        font-size: 11px;
     }
 
-    #gallery .gallery-item.video-card img {
+    .skeleton-img {
         width: 130px;
         height: 130px;
+    }
+
+    .date-separator-text {
+        font-size: 18px;
     }
 }

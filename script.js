@@ -1,4 +1,4 @@
-const imageContainer = document.getElementById('gallery');
+const imageContainer = document.getElementById('galleryGrid');
 let currentImageIndex = 0;
 let loadedImages = [];
 let leftArrow;
@@ -306,13 +306,13 @@ function scrollToPhotoByDate(dateKey) {
     const targetIndex = imageList.findIndex((name) => name.startsWith(dateKey));
     if (targetIndex === -1) return;
 
-    const targetEl = document.querySelector(`img[data-index="${targetIndex}"]`);
-    if (targetEl) {
-        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        // 简单高亮一下这张图，配合 CSS 可以做边框/阴影动画
-        targetEl.classList.add('highlight-photo');
+    const targetImg = document.querySelector(`img[data-index="${targetIndex}"]`);
+    if (targetImg) {
+        const polaroid = targetImg.closest('.polaroid') || targetImg;
+        polaroid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        polaroid.classList.add('highlight-photo');
         setTimeout(() => {
-            targetEl.classList.remove('highlight-photo');
+            polaroid.classList.remove('highlight-photo');
         }, 1500);
     }
 }
@@ -376,19 +376,78 @@ async function loadImageList() {
     }
 }
 
-// 加载全部图片（用 allSettled 避免单个失败导致全部不显示）
-async function loadAllImages() {
+// 旋转 class 列表
+const ROTATION_CLASSES = ['rot-a', 'rot-b', 'rot-c', 'rot-d', 'rot-e'];
+
+// 预构建日期分组 + 骨架屏结构
+function buildGalleryStructure() {
+    const galleryGrid = document.getElementById('galleryGrid');
+    galleryGrid.innerHTML = '';
+
+    let currentDate = null;
+    let currentGroup = null;
+    let posInGroup = 0;
+
+    imageList.forEach((filename, index) => {
+        const dateKey = filename.substring(0, 10); // "2025-11-14"
+
+        if (dateKey !== currentDate) {
+            currentDate = dateKey;
+            posInGroup = 0;
+
+            // 日期分隔标签
+            const separator = document.createElement('div');
+            separator.className = 'gallery-date-separator';
+            const parts = dateKey.split('-');
+            separator.innerHTML = `<span class="date-separator-text">${parts[0]}.${parts[1]}.${parts[2]}</span>`;
+            galleryGrid.appendChild(separator);
+
+            // 日期分组容器
+            currentGroup = document.createElement('div');
+            currentGroup.className = 'gallery-date-group';
+            currentGroup.setAttribute('data-date-key', dateKey);
+            galleryGrid.appendChild(currentGroup);
+        }
+
+        // 骨架屏占位
+        const skeleton = document.createElement('div');
+        skeleton.className = 'gallery-skeleton';
+        skeleton.setAttribute('data-index', index);
+        skeleton.style.transitionDelay = `${posInGroup * 0.05}s`;
+        skeleton.innerHTML = '<div class="skeleton-img"></div><span class="skeleton-date"></span>';
+        currentGroup.appendChild(skeleton);
+        posInGroup++;
+    });
+}
+
+// 渐进式加载：每张图加载完立即替换对应 skeleton
+function loadAllImages() {
     if (!imageList || imageList.length === 0) return;
-    try {
-        const results = await Promise.allSettled(
-            imageList.map((_, i) => loadThumbnail(i))
-        );
-        results.forEach((r) => {
-            if (r.status === 'fulfilled' && r.value) imageContainer.appendChild(r.value);
+
+    buildGalleryStructure();
+
+    imageList.forEach((_, i) => {
+        loadThumbnail(i).then(element => {
+            if (!element) return;
+            const placeholder = document.querySelector(`.gallery-skeleton[data-index="${i}"]`);
+            if (placeholder) {
+                element.classList.add('gallery-fade-in');
+                element.style.transitionDelay = placeholder.style.transitionDelay;
+                placeholder.replaceWith(element);
+                // 下一帧触发入场动画
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        element.classList.add('visible');
+                    });
+                });
+            }
         });
-    } catch (e) {
-        console.error('loadAllImages error:', e);
-    }
+    });
+}
+
+function parseDateFromFilename(filename) {
+    const match = filename.match(/(\d{4})-(\d{2})-(\d{2})/);
+    return match ? `${match[1]}.${match[2]}.${match[3]}` : '';
 }
 
 function loadThumbnail(listIndex) {
@@ -406,27 +465,19 @@ function loadThumbnail(listIndex) {
             return;
         }
 
-        // 图片：从 thumbs 或原图加载（不设 crossOrigin，避免本地/同源加载异常）
+        // 图片：从 thumbs 加载，失败则降级到原图
         const thumbPath = getThumbPath(filename);
         const thumbImg = new Image();
         thumbImg.src = thumbPath;
 
         thumbImg.onload = function () {
-            try {
-                createImageElement(thumbImg, listIndex, filename, resolve);
-            } catch (e) {
-                resolve(null);
-            }
+            resolve(createImageElement(thumbImg, listIndex, filename));
         };
 
         thumbImg.onerror = function () {
             thumbImg.src = `images/${filename}`;
             thumbImg.onload = function () {
-                try {
-                    createImageElement(thumbImg, listIndex, filename, resolve);
-                } catch (e) {
-                    resolve(null);
-                }
+                resolve(createImageElement(thumbImg, listIndex, filename));
             };
             thumbImg.onerror = function () {
                 resolve(null);
@@ -435,86 +486,71 @@ function loadThumbnail(listIndex) {
     });
 }
 
-// 创建视频卡片元素（缩略图 + 点击播放）
+// 创建视频卡片元素（Polaroid 包裹 + 点击播放）
 function createVideoElement(thumbImg, listIndex, filename) {
-    const wrapper = document.createElement('div');
-    wrapper.className = 'gallery-item video-card';
+    const dateStr = parseDateFromFilename(filename);
+
+    const polaroid = document.createElement('div');
+    polaroid.className = 'polaroid video-card ' + ROTATION_CLASSES[listIndex % ROTATION_CLASSES.length];
 
     const imgElement = document.createElement('img');
     imgElement.dataset.large = `images/${filename}`;
     imgElement.src = thumbImg.src;
     imgElement.alt = filename;
     imgElement.setAttribute('data-index', listIndex);
-    imgElement.classList.add('thumbnail', 'photo-card', 'video-poster');
+    imgElement.setAttribute('data-date', dateStr);
 
-    const match = filename.match(/(\d{4})-(\d{2})-(\d{2})/);
-    const exifDate = match ? `${match[1]}.${match[2]}.${match[3]}` : '';
-    imgElement.setAttribute('data-date', exifDate);
+    const dateLabel = document.createElement('span');
+    dateLabel.className = 'polaroid-date';
+    dateLabel.textContent = dateStr;
 
     loadedImages[listIndex] = {
         src: imgElement.dataset.large,
-        date: exifDate,
+        date: dateStr,
         type: 'video',
     };
 
-    wrapper.appendChild(imgElement);
-    wrapper.addEventListener('click', function () {
-        showPopup(imgElement.dataset.large, exifDate, listIndex, 'video');
+    polaroid.appendChild(imgElement);
+    polaroid.appendChild(dateLabel);
+    polaroid.addEventListener('click', function () {
+        showPopup(imgElement.dataset.large, dateStr, listIndex, 'video');
     });
-    wrapper.style.cursor = 'pointer';
 
-    return wrapper;
+    return polaroid;
 }
 
-// 创建缩略图元素（这里顺便给瀑布流/卡片样式提供 class）
-function createImageElement(thumbImg, listIndex, filename, resolve) {
+// 创建图片卡片元素（Polaroid 包裹 + 日期标签）
+function createImageElement(thumbImg, listIndex, filename) {
+    const dateStr = parseDateFromFilename(filename);
+
+    const polaroid = document.createElement('div');
+    polaroid.className = 'polaroid ' + ROTATION_CLASSES[listIndex % ROTATION_CLASSES.length];
+
     const imgElement = document.createElement('img');
+    imgElement.loading = 'lazy';
     imgElement.dataset.large = `images/${filename}`;
     imgElement.src = thumbImg.src;
     imgElement.alt = filename;
-    imgElement.setAttribute('data-date', '');
     imgElement.setAttribute('data-index', listIndex);
+    imgElement.setAttribute('data-date', dateStr);
 
-    // 视觉增强：为 CSS 提供更丰富的 class（圆角、阴影、hover 放大等在 CSS 里做）
-    imgElement.classList.add('thumbnail', 'photo-card');
+    const dateLabel = document.createElement('span');
+    dateLabel.className = 'polaroid-date';
+    dateLabel.textContent = dateStr;
 
-    // 先尝试从 EXIF 读日期
-    EXIF.getData(thumbImg, function () {
-        let exifDate = EXIF.getTag(this, 'DateTimeOriginal');
+    loadedImages[listIndex] = {
+        src: imgElement.dataset.large,
+        date: dateStr,
+        type: 'image',
+    };
 
-        if (exifDate) {
-            exifDate = exifDate.replace(/^(\d{4}):(\d{2}):(\d{2}).*$/, '$1.$2.$3');
-        } else {
-            // 如果 EXIF 没有，就从文件名解析 YYYY-MM-DD
-            const match = filename.match(/(\d{4})-(\d{2})-(\d{2})/);
-            if (match) {
-                exifDate = `${match[1]}.${match[2]}.${match[3]}`;
-            } else {
-                exifDate = '';
-            }
-        }
-
-        imgElement.setAttribute('data-date', exifDate);
-
-        loadedImages[listIndex] = {
-            src: imgElement.dataset.large,
-            date: exifDate,
-            type: 'image',
-        };
+    polaroid.appendChild(imgElement);
+    polaroid.appendChild(dateLabel);
+    polaroid.addEventListener('click', function () {
+        showPopup(imgElement.dataset.large, dateStr, listIndex, 'image');
     });
 
-    imgElement.addEventListener('click', function () {
-        showPopup(
-            imgElement.dataset.large,
-            imgElement.getAttribute('data-date'),
-            listIndex,
-            'image'
-        );
-    });
-
-    imgElement.style.cursor = 'pointer';
-
-    resolve(imgElement);
+    return polaroid;
 }
 
 function showPopup(src, date, indexInList, mediaType = 'image') {
