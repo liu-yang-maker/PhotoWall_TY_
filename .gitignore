@@ -1,2 +1,34 @@
-.vscode
-.idea
+# 编辑器 / IDE
+.vscode/
+.idea/
+.cursor/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Python（step1_rename.py、step2_thumbs.py）
+__pycache__/
+*.py[cod]
+*$py.class
+.Python
+.venv/
+venv/
+*.egg-info/
+
+# 环境与密钥
+.env
+.env.*
+
+# 日志与临时文件
+*.log
+*.tmp
+*.swp
+*~
