@@ -104,11 +104,17 @@
             </div>
         </section>
 
-        <!-- 互动小票（Three.js + Verlet 纸张模拟） -->
-        <section id="receiptStage" aria-label="Interactive receipt">
-            <div class="receipt-shell">
-                <div class="receipt-hint">按住小票任意位置拖拽，可弯曲、折叠并自然回弹</div>
-                <div id="receiptMount" class="receipt-mount"></div>
+        <!-- 互动小票 + 透明幕布照片（并列） -->
+        <section id="receiptStage" aria-label="Interactive receipt and curtain">
+            <div class="receipt-curtain-row">
+                <div class="receipt-shell">
+                    <div class="receipt-hint">按住小票任意位置拖拽，可弯曲、折叠并自然回弹</div>
+                    <div id="receiptMount" class="receipt-mount"></div>
+                </div>
+                <div class="curtain-shell">
+                    <div class="curtain-hint">抓住幕布向上掀起或甩动，背后藏着我们的合照</div>
+                    <div id="curtainMount" class="curtain-mount"></div>
+                </div>
             </div>
         </section>
 
@@ -138,7 +144,7 @@
         <a href="#loveQuote" class="side-nav-dot" data-section="loveQuote" title="Love Quote"></a>
         <a href="#dates" class="side-nav-dot" data-section="dates" title="Dates"></a>
         <a href="#timeline" class="side-nav-dot" data-section="timeline" title="Timeline"></a>
-        <a href="#receiptStage" class="side-nav-dot" data-section="receiptStage" title="Receipt"></a>
+        <a href="#receiptStage" class="side-nav-dot" data-section="receiptStage" title="Receipt &amp; curtain"></a>
         <a href="#gallery" class="side-nav-dot" data-section="gallery" title="Gallery"></a>
     </nav>
 
@@ -148,6 +154,7 @@
     <script src="script.js"></script>
     <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
     <script src="receipt.js"></script>
+    <script src="curtain.js"></script>
     <script src="hearts.js"></script>
     <script src="stars.js"></script>
     <script src="meteors.js"></script>
