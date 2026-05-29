@@ -42,12 +42,14 @@ def process_image(filename, input_folder, output_folder, size):
                 img = img.crop((0, offset, img.width, offset + new_height))
 
             img = img.resize(size, Image.LANCZOS)
+            if img.mode == "RGBA":
+                img = img.convert("RGB")
 
             thumb_path = os.path.join(output_folder, filename)
             if exif_data:
-                img.save(thumb_path, quality=90, optimize=True, exif=exif_data)
+                img.save(thumb_path, quality=75, optimize=True, exif=exif_data)
             else:
-                img.save(thumb_path, quality=90, optimize=True)
+                img.save(thumb_path, quality=75, optimize=True)
 
             print(f"Thumbnail created for {filename}")
     except Exception as e:
@@ -171,4 +173,4 @@ def generate_thumbnails(
 
 
 if __name__ == "__main__":
-    generate_thumbnails(size=(360, 360), max_workers=8)
+    generate_thumbnails(size=(200, 200), max_workers=8)

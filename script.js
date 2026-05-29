@@ -450,28 +450,35 @@ function buildGalleryStructure() {
     });
 }
 
-// 渐进式加载：每张图加载完立即替换对应 skeleton
+// 懒加载：只有骨架屏进入视口附近时才加载对应图片
 function loadAllImages() {
     if (!imageList || imageList.length === 0) return;
 
     buildGalleryStructure();
 
-    imageList.forEach((_, i) => {
-        loadThumbnail(i).then(element => {
-            if (!element) return;
-            const placeholder = document.querySelector(`.gallery-skeleton[data-index="${i}"]`);
-            if (placeholder) {
+    const lazyObserver = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+            if (!entry.isIntersecting) return;
+            const skeleton = entry.target;
+            const i = parseInt(skeleton.getAttribute('data-index'));
+            lazyObserver.unobserve(skeleton);
+
+            loadThumbnail(i).then(element => {
+                if (!element) return;
                 element.classList.add('gallery-fade-in');
-                element.style.transitionDelay = placeholder.style.transitionDelay;
-                placeholder.replaceWith(element);
-                // 下一帧触发入场动画
+                element.style.transitionDelay = skeleton.style.transitionDelay;
+                skeleton.replaceWith(element);
                 requestAnimationFrame(() => {
                     requestAnimationFrame(() => {
                         element.classList.add('visible');
                     });
                 });
-            }
+            });
         });
+    }, { rootMargin: '200px 0px' });
+
+    document.querySelectorAll('.gallery-skeleton').forEach(sk => {
+        lazyObserver.observe(sk);
     });
 }
 
