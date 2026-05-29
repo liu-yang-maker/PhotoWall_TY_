@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Our Little Universe</title>
+    <link rel="stylesheet" href="gallery.css">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Great+Vibes&family=Ma+Shan+Zheng&display=swap" rel="stylesheet">
+    <link rel="apple-touch-icon" sizes="180x180" href="readme_img/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="readme_img/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="readme_img/favicon/favicon-16x16.png">
+</head>
+<body>
+    <canvas id="particleCanvas"></canvas>
+
+    <header id="galleryHeader">
+        <div class="header-left">
+            <img class="avatar" src="readme_img/favicon/apple-touch-icon.png" alt="avatar">
+            <span class="badge-text">MANGO &#9829; PUDDING</span>
+        </div>
+        <div class="header-center">
+            <div class="timer-card">
+                <p class="subtitle">OUR LITTLE UNIVERSE</p>
+                <p class="timer" id="timerDisplay">我们把日子攒成星光：&nbsp;&nbsp;<span class="timer-num" id="timerDays">0</span>天&nbsp;&nbsp;<span class="timer-num" id="timerHours">00</span>时&nbsp;&nbsp;<span class="timer-num" id="timerMinutes">00</span>分&nbsp;&nbsp;<span class="timer-num" id="timerSeconds">00</span>秒</p>
+                <p class="tagline">从那一刻开始，时间也有了偏心</p>
+            </div>
+        </div>
+        <div class="header-right">
+            <a href="index.html" class="home-btn">&#8592; Home</a>
+        </div>
+    </header>
+
+    <main id="photoStage"></main>
+
+    <div id="modeIndicator">
+        <button data-mode="0" class="mode-tag active"><span class="mode-icon">&hearts;</span><span class="mode-name">爱心</span></button>
+        <button data-mode="1" class="mode-tag"><span class="mode-icon">&#9638;</span><span class="mode-name">拼图</span></button>
+        <button data-mode="2" class="mode-tag"><span class="mode-icon">&#9654;</span><span class="mode-name">胶片</span></button>
+        <button data-mode="3" class="mode-tag"><span class="mode-icon">&#9678;</span><span class="mode-name">星环</span></button>
+        <button data-mode="4" class="mode-tag"><span class="mode-icon">&#64;</span><span class="mode-name">漩涡</span></button>
+        <button data-mode="5" class="mode-tag"><span class="mode-icon">&#9660;</span><span class="mode-name">瀑布</span></button>
+    </div>
+
+    <footer id="galleryFooter">
+        <div class="audio-visualizer">
+            <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+            <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+            <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+            <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+            <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+            <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+            <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+            <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+            <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+            <span class="bar"></span><span class="bar"></span><span class="bar"></span>
+            <span class="bar"></span><span class="bar"></span>
+        </div>
+        <p class="lyrics-sub" id="lyricsSub"></p>
+        <p class="lyrics-main" id="lyricsMain"></p>
+    </footer>
+
+    <div id="galleryPopup">
+        <span id="galleryCloseBtn">&times;</span>
+        <img id="galleryPopupImg" src="" alt="">
+    </div>
+
+    <script src="gallery.js"></script>
+</body>
+</html>
