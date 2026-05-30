@@ -835,19 +835,20 @@ main {
 /* ===== 互动小票 + 幕布照片（并列） ===== */
 #receiptStage {
     margin: 18px auto 6px;
-    max-width: min(1120px, 100%);
+    max-width: min(1400px, 100%);
     padding: 0 10px 10px;
 }
 
 #receiptStage .receipt-curtain-row {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
     align-items: stretch;
 }
 
 #receiptStage .receipt-shell,
-#receiptStage .curtain-shell {
+#receiptStage .curtain-shell,
+#receiptStage .glass-shell {
     position: relative;
     background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(252,252,252,0.98));
     border-radius: 18px;
@@ -860,7 +861,8 @@ main {
 }
 
 #receiptStage .receipt-shell::before,
-#receiptStage .curtain-shell::before {
+#receiptStage .curtain-shell::before,
+#receiptStage .glass-shell::before {
     content: '';
     position: absolute;
     inset: -40% -20% auto -20%;
@@ -870,7 +872,8 @@ main {
 }
 
 #receiptStage .receipt-hint,
-#receiptStage .curtain-hint {
+#receiptStage .curtain-hint,
+#receiptStage .glass-hint {
     position: absolute;
     top: 10px;
     left: 14px;
@@ -886,7 +889,8 @@ main {
 }
 
 #receiptStage .receipt-mount,
-#receiptStage .curtain-mount {
+#receiptStage .curtain-mount,
+#receiptStage .glass-mount {
     position: relative;
     width: 100%;
     height: 420px;
@@ -897,6 +901,62 @@ main {
     width: 100%;
     height: 100%;
     touch-action: none;
+}
+
+/* ===== 玻璃破碎效果 ===== */
+.glass-mount {
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.glass-photo {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 0;
+}
+
+#glassCanvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    cursor: pointer;
+    z-index: 3;
+}
+
+.glass-restore-btn {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 5;
+    padding: 8px 20px;
+    border: none;
+    border-radius: 20px;
+    background: linear-gradient(135deg, var(--rose-gold), var(--accent));
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(183, 110, 121, 0.3);
+    transition: all 0.3s;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.glass-restore-btn.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.glass-restore-btn:hover {
+    transform: translateX(-50%) translateY(-2px);
+    box-shadow: 0 6px 20px rgba(183, 110, 121, 0.4);
 }
 
 /* ===== 图片弹窗 - 毛玻璃效果 ===== */
@@ -1208,7 +1268,8 @@ footer {
     }
 
     #receiptStage .receipt-mount,
-    #receiptStage .curtain-mount {
+    #receiptStage .curtain-mount,
+    #receiptStage .glass-mount {
         height: 340px;
     }
 

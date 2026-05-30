@@ -105,8 +105,8 @@
             </div>
         </section>
 
-        <!-- 互动小票 + 透明幕布照片（并列） -->
-        <section id="receiptStage" aria-label="Interactive receipt and curtain">
+        <!-- 互动小票 + 透明幕布照片 + 玻璃破碎（三列） -->
+        <section id="receiptStage" aria-label="Interactive receipt, curtain and glass">
             <div class="receipt-curtain-row">
                 <div class="receipt-shell">
                     <div class="receipt-hint">按住小票任意位置拖拽，可弯曲、折叠并自然回弹</div>
@@ -115,6 +115,14 @@
                 <div class="curtain-shell">
                     <div class="curtain-hint">抓住幕布向上掀起或甩动，背后藏着我们的合照</div>
                     <div id="curtainMount" class="curtain-mount"></div>
+                </div>
+                <div class="glass-shell">
+                    <div class="glass-hint">点击玻璃使其破碎，揭开隐藏的合照</div>
+                    <div id="glassMount" class="glass-mount">
+                        <img id="glassPhoto" class="glass-photo" src="images/2025-11-14_001.jpg" alt="Hidden photo">
+                        <canvas id="glassCanvas"></canvas>
+                        <button id="glassRestore" class="glass-restore-btn">&#10227; 复原玻璃</button>
+                    </div>
                 </div>
             </div>
         </section>
@@ -156,6 +164,7 @@
     <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
     <script src="receipt.js"></script>
     <script src="curtain.js"></script>
+    <script src="glass.js"></script>
     <script src="hearts.js"></script>
     <script src="stars.js"></script>
     <script src="meteors.js"></script>
