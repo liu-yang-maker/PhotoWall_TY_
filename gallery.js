@@ -4,7 +4,7 @@
         PHOTOS_PER_MODE: 50,
         MODE_AUTO_INTERVAL: 35000,
         TRANSITION_DURATION: 1200,
-        MODES: ['heart', 'mosaic', 'carousel', 'orbit', 'spiral', 'waterfall']
+        MODES: ['heart', 'mosaic', 'carousel', 'orbit', 'spiral', 'waterfall', 'globe']
     };
 
     const VIDEO_EXTENSIONS = ['.mp4', '.mov', '.webm', '.avi', '.mkv'];
@@ -38,6 +38,19 @@
     let waterfallPaused = false;
     let waterfallSpeed = 0.4;
 
+    // Globe state
+    let globeAnimId = null;
+    let globeRotX = 0.4;
+    let globeRotY = 2.88;
+    let globeZoom = 1.0;
+    let globeDragging = false;
+    let globeDragStartX = 0;
+    let globeDragStartY = 0;
+    let globeDragStartRotX = 0;
+    let globeDragStartRotY = 0;
+    let globeAutoRot = 0;
+    let globeTime = 0;
+
     const lyrics = [
         { sub: '来时路的终点', main: '是和你遇见' },
         { sub: '唯有你让那誓言', main: '浸过时间' },
@@ -51,6 +64,12 @@
         { sub: '你是我的今天', main: '也是我所有的明天' },
     ];
 
+    // Globe data references (resolved at init time)
+    let _globeTC = null;
+    let _globeWC = null;
+    let _globeCB = null;
+    let _globeCountries = null;
+
     // ===== INIT =====
     async function init() {
         await loadImageList();
@@ -59,6 +78,11 @@
         initParticles();
         initLyrics();
         initBars();
+        // Resolve globe data from global scope
+        _globeTC = window.TRAVEL_CITIES || (typeof TRAVEL_CITIES !== 'undefined' ? TRAVEL_CITIES : {});
+        _globeWC = (typeof WORLD_CITIES !== 'undefined') ? WORLD_CITIES : [];
+        _globeCB = (typeof COUNTRY_BORDERS !== 'undefined') ? COUNTRY_BORDERS : [];
+        _globeCountries = (typeof COUNTRIES !== 'undefined') ? COUNTRIES : [];
         applyLayout('heart');
         startAutoRotate();
         bindEvents();
@@ -126,6 +150,7 @@
         if (waterfallAnimId) { cancelAnimationFrame(waterfallAnimId); waterfallAnimId = null; }
         if (carouselAutoTimer) { clearInterval(carouselAutoTimer); carouselAutoTimer = null; }
         if (carouselPauseTimer) { clearTimeout(carouselPauseTimer); carouselPauseTimer = null; }
+        stopGlobe();
         photoElements.forEach(el => el.classList.remove('no-transition', 'carousel-center'));
         orbitPaused = false;
         orbitDragging = false;
@@ -146,6 +171,7 @@
             case 'orbit': layoutOrbit(); break;
             case 'spiral': layoutSpiral(); break;
             case 'waterfall': layoutWaterfall(); break;
+            case 'globe': layoutGlobe(); break;
         }
     }
 
@@ -472,6 +498,383 @@
         waterfallAnimId = requestAnimationFrame(animate);
     }
 
+    // ===== MODE 7: GLOBE =====
+    function resolveGlobeData() {
+        // Try multiple sources for timelineData
+        var td = null;
+        if (window.timelineData) td = window.timelineData;
+        else if (typeof timelineData !== 'undefined') td = timelineData;
+
+        if (td && td.length > 0 && Object.keys(_globeTC).length === 0) {
+            var map = {};
+            for (var i = 0; i < td.length; i++) {
+                var item = td[i];
+                if (!item.city) continue;
+                if (!map[item.city]) map[item.city] = { events: [] };
+                map[item.city].events.push({ dateKey: item.dateKey, title: item.title });
+            }
+            _globeTC = map;
+        }
+
+        // Fallback: if still empty, hardcode from known data
+        if (Object.keys(_globeTC).length === 0) {
+            _globeTC = {
+                'shanghai': { events: [{dateKey:'2025-11-14',title:'我们在上海'},{dateKey:'2025-12-08',title:'我们在上海'},{dateKey:'2025-12-20',title:'我们在上海'},{dateKey:'2026-01-30',title:'我们在上海'},{dateKey:'2026-02-28',title:'结束异地'},{dateKey:'2026-04-01',title:'一起玩了很多'},{dateKey:'2026-04-06',title:'迪士尼'},{dateKey:'2026-04-29',title:'四月小结'},{dateKey:'2026-05-20',title:'第一次520'},{dateKey:'2026-05-24',title:'小猪咪来了'}] },
+                'beijing': { events: [{dateKey:'2025-11-22',title:'正式在一起'},{dateKey:'2026-02-06',title:'我们在北京'},{dateKey:'2026-02-24',title:'我们在北京'},{dateKey:'2026-05-09',title:'博士毕业'}] },
+                'zhangjiakou': { events: [{dateKey:'2026-02-12',title:'河北张家口'}] },
+                'taizhou': { events: [{dateKey:'2025-12-29',title:'第一次旅行'},{dateKey:'2026-01-01',title:'新年约定'}] },
+                'dalian': { events: [{dateKey:'2026-04-30',title:'大连旅游'}] },
+                'yantai': { events: [{dateKey:'2026-05-04',title:'烟台旅游'}] },
+            };
+        }
+
+        if (_globeWC.length === 0 && typeof WORLD_CITIES !== 'undefined') _globeWC = WORLD_CITIES;
+        if (_globeCB.length === 0 && typeof COUNTRY_BORDERS !== 'undefined') _globeCB = COUNTRY_BORDERS;
+        if (_globeCountries.length === 0 && typeof COUNTRIES !== 'undefined') _globeCountries = COUNTRIES;
+    }
+
+    function layoutGlobe() {
+        resolveGlobeData();
+        photoElements.forEach(el => {
+            el.style.opacity = '0';
+            el.style.pointerEvents = 'none';
+        });
+        const gc = document.getElementById('globeCanvas');
+        gc.classList.add('active');
+        gc.width = window.innerWidth * devicePixelRatio;
+        gc.height = window.innerHeight * devicePixelRatio;
+        gc.style.width = window.innerWidth + 'px';
+        gc.style.height = window.innerHeight + 'px';
+        startGlobeAnimation();
+    }
+
+    function stopGlobe() {
+        if (globeAnimId) { cancelAnimationFrame(globeAnimId); globeAnimId = null; }
+        const gc = document.getElementById('globeCanvas');
+        gc.classList.remove('active');
+        const popup = document.getElementById('globePopup');
+        popup.classList.remove('visible');
+        photoElements.forEach(el => { el.style.pointerEvents = ''; });
+    }
+
+    function latLngToScreen(lat, lng, rotX, rotY, radius, cx, cy) {
+        const phi = (90 - lat) * Math.PI / 180;
+        const theta = (lng + 180) * Math.PI / 180;
+        let x = radius * Math.sin(phi) * Math.cos(theta);
+        let y = radius * Math.cos(phi);
+        let z = radius * Math.sin(phi) * Math.sin(theta);
+        const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+        const x2 = x * cosY - z * sinY;
+        const z2 = x * sinY + z * cosY;
+        const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
+        const y2 = y * cosX - z2 * sinX;
+        const z3 = y * sinX + z2 * cosX;
+        return { sx: cx - x2, sy: cy - y2, visible: z3 > 0, depth: z3 };
+    }
+
+    function startGlobeAnimation() {
+        const gc = document.getElementById('globeCanvas');
+        const gctx = gc.getContext('2d');
+
+        function tick() {
+            globeTime++;
+
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            gctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+            gctx.clearRect(0, 0, w, h);
+
+            const cx = w / 2;
+            const cy = h / 2;
+            const baseRadius = Math.min(w, h) * 0.32;
+            const radius = baseRadius * globeZoom;
+
+            // Atmosphere glow
+            const atmoGrad = gctx.createRadialGradient(cx, cy, radius * 0.9, cx, cy, radius * 1.3);
+            atmoGrad.addColorStop(0, 'rgba(80, 160, 255, 0.08)');
+            atmoGrad.addColorStop(0.5, 'rgba(60, 140, 230, 0.04)');
+            atmoGrad.addColorStop(1, 'rgba(60, 140, 230, 0)');
+            gctx.fillStyle = atmoGrad;
+            gctx.fillRect(0, 0, w, h);
+
+            // Globe body
+            gctx.save();
+            gctx.beginPath();
+            gctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            const bodyGrad = gctx.createRadialGradient(cx - radius * 0.3, cy - radius * 0.3, 0, cx, cy, radius);
+            bodyGrad.addColorStop(0, '#1a3a5c');
+            bodyGrad.addColorStop(0.5, '#0d2240');
+            bodyGrad.addColorStop(1, '#061428');
+            gctx.fillStyle = bodyGrad;
+            gctx.fill();
+            gctx.restore();
+
+            // Clip to globe
+            gctx.save();
+            gctx.beginPath();
+            gctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            gctx.clip();
+
+            // Grid lines
+            gctx.strokeStyle = 'rgba(80, 140, 200, 0.12)';
+            gctx.lineWidth = 0.5;
+            for (let lat = -80; lat <= 80; lat += 20) {
+                gctx.beginPath();
+                let started = false;
+                for (let lng = -180; lng <= 180; lng += 5) {
+                    const p = latLngToScreen(lat, lng, globeRotX, globeRotY, radius, cx, cy);
+                    if (p.visible) {
+                        if (!started) { gctx.moveTo(p.sx, p.sy); started = true; }
+                        else gctx.lineTo(p.sx, p.sy);
+                    } else { started = false; }
+                }
+                gctx.stroke();
+            }
+            for (let lng = -180; lng < 180; lng += 30) {
+                gctx.beginPath();
+                let started = false;
+                for (let lat = -90; lat <= 90; lat += 5) {
+                    const p = latLngToScreen(lat, lng, globeRotX, globeRotY, radius, cx, cy);
+                    if (p.visible) {
+                        if (!started) { gctx.moveTo(p.sx, p.sy); started = true; }
+                        else gctx.lineTo(p.sx, p.sy);
+                    } else { started = false; }
+                }
+                gctx.stroke();
+            }
+
+            // Country borders (filled polygons per country)
+            if (_globeCB.length > 0) {
+                _globeCB.forEach(country => {
+                    const pts = country.points;
+                    // Check if any point visible
+                    let anyVisible = false;
+                    const screenPts = pts.map(pt => {
+                        const p = latLngToScreen(pt[0], pt[1], globeRotX, globeRotY, radius, cx, cy);
+                        if (p.visible) anyVisible = true;
+                        return p;
+                    });
+                    if (!anyVisible) return;
+
+                    gctx.beginPath();
+                    let started = false;
+                    screenPts.forEach(p => {
+                        if (p.visible) {
+                            if (!started) { gctx.moveTo(p.sx, p.sy); started = true; }
+                            else gctx.lineTo(p.sx, p.sy);
+                        }
+                    });
+                    gctx.closePath();
+
+                    if (country.color === 'highlight') {
+                        gctx.fillStyle = 'rgba(80, 160, 100, 0.35)';
+                        gctx.strokeStyle = 'rgba(120, 220, 140, 0.6)';
+                        gctx.lineWidth = 1.2;
+                    } else {
+                        gctx.fillStyle = 'rgba(50, 110, 70, 0.22)';
+                        gctx.strokeStyle = 'rgba(70, 160, 100, 0.35)';
+                        gctx.lineWidth = 0.7;
+                    }
+                    gctx.fill();
+                    gctx.stroke();
+                });
+            }
+
+            // Cities (gray dots + labels)
+            if (_globeWC.length > 0) {
+                const fontSize = Math.max(6, 7 * Math.min(globeZoom, 1.2));
+                const labelAlpha = Math.min(0.5, 0.25 + globeZoom * 0.15);
+                _globeWC.forEach(city => {
+                    const p = latLngToScreen(city.lat, city.lng, globeRotX, globeRotY, radius, cx, cy);
+                    if (!p.visible) return;
+                    const isTravel = _globeTC && _globeTC[city.nameEn];
+                    if (isTravel) return;
+                    const size = Math.max(1.2, 1.5 * globeZoom);
+                    gctx.beginPath();
+                    gctx.arc(p.sx, p.sy, size, 0, Math.PI * 2);
+                    gctx.fillStyle = 'rgba(160, 180, 200, 0.5)';
+                    gctx.fill();
+                    if (globeZoom > 0.7) {
+                        gctx.font = `${fontSize}px Montserrat, sans-serif`;
+                        gctx.fillStyle = `rgba(160, 185, 210, ${labelAlpha})`;
+                        gctx.fillText(city.name, p.sx + size + 2, p.sy + 2);
+                    }
+                });
+            }
+
+            // Countries (red dots + labels)
+            if (_globeCountries.length > 0) {
+                const fontSize = Math.max(7, 8 * Math.min(globeZoom, 1.3));
+                const labelAlpha = Math.min(0.6, 0.35 + globeZoom * 0.18);
+                _globeCountries.forEach(country => {
+                    const p = latLngToScreen(country.lat, country.lng, globeRotX, globeRotY, radius, cx, cy);
+                    if (!p.visible) return;
+                    const size = Math.max(2, 2.5 * globeZoom);
+                    gctx.beginPath();
+                    gctx.arc(p.sx, p.sy, size, 0, Math.PI * 2);
+                    gctx.fillStyle = 'rgba(200, 80, 80, 0.55)';
+                    gctx.fill();
+                    gctx.font = `bold ${fontSize}px Montserrat, sans-serif`;
+                    gctx.fillStyle = `rgba(220, 110, 110, ${labelAlpha})`;
+                    gctx.fillText(country.name, p.sx + size + 3, p.sy + 3);
+                });
+            }
+
+            // Travel route lines (dashed, connecting cities in chronological order)
+            if (Object.keys(_globeTC).length > 0 && _globeWC.length > 0) {
+                const travelKeys = Object.keys(_globeTC);
+                const orderedCities = [];
+                if (window.timelineData) {
+                    const seen = new Set();
+                    window.timelineData.forEach(item => {
+                        if (item.city && !seen.has(item.city) && travelKeys.includes(item.city)) {
+                            seen.add(item.city);
+                            orderedCities.push(item.city);
+                        }
+                    });
+                }
+                if (orderedCities.length > 1) {
+                    gctx.save();
+                    gctx.setLineDash([4, 6]);
+                    gctx.strokeStyle = 'rgba(255, 200, 100, 0.35)';
+                    gctx.lineWidth = 1.2;
+                    gctx.beginPath();
+                    let started = false;
+                    orderedCities.forEach(key => {
+                        const city = _globeWC.find(c => c.nameEn === key);
+                        if (!city) return;
+                        const p = latLngToScreen(city.lat, city.lng, globeRotX, globeRotY, radius, cx, cy);
+                        if (p.visible) {
+                            if (!started) { gctx.moveTo(p.sx, p.sy); started = true; }
+                            else gctx.lineTo(p.sx, p.sy);
+                        } else { started = false; }
+                    });
+                    gctx.stroke();
+                    gctx.setLineDash([]);
+                    gctx.restore();
+                }
+
+                // Travel cities (gold pulsing + highlighted area + always show labels)
+                travelKeys.forEach(key => {
+                    const city = _globeWC.find(c => c.nameEn === key);
+                    if (!city) return;
+                    const p = latLngToScreen(city.lat, city.lng, globeRotX, globeRotY, radius, cx, cy);
+                    if (!p.visible) return;
+                    const pulse = 1 + 0.3 * Math.sin(globeTime * 0.05);
+                    const dotSize = Math.max(2.5, 3 * globeZoom) * pulse;
+
+                    // Area highlight (soft glow)
+                    const areaSize = dotSize * 3.5;
+                    const areaGrad = gctx.createRadialGradient(p.sx, p.sy, 0, p.sx, p.sy, areaSize);
+                    areaGrad.addColorStop(0, 'rgba(255, 215, 0, 0.18)');
+                    areaGrad.addColorStop(0.5, 'rgba(255, 200, 50, 0.06)');
+                    areaGrad.addColorStop(1, 'rgba(255, 200, 50, 0)');
+                    gctx.fillStyle = areaGrad;
+                    gctx.beginPath();
+                    gctx.arc(p.sx, p.sy, areaSize, 0, Math.PI * 2);
+                    gctx.fill();
+
+                    // Outer ring
+                    gctx.beginPath();
+                    gctx.arc(p.sx, p.sy, dotSize * 2, 0, Math.PI * 2);
+                    gctx.strokeStyle = `rgba(255, 215, 0, ${0.15 + 0.1 * Math.sin(globeTime * 0.03)})`;
+                    gctx.lineWidth = 1;
+                    gctx.stroke();
+
+                    // Core dot
+                    gctx.beginPath();
+                    gctx.arc(p.sx, p.sy, dotSize, 0, Math.PI * 2);
+                    gctx.fillStyle = 'rgba(255, 215, 0, 0.92)';
+                    gctx.fill();
+                    gctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+                    gctx.lineWidth = 1.2;
+                    gctx.stroke();
+
+                    // Label (always visible, bold golden)
+                    const fontSize = Math.max(9, 10 * Math.min(globeZoom, 1.5));
+                    gctx.font = `bold ${fontSize}px Montserrat, sans-serif`;
+                    gctx.fillStyle = 'rgba(255, 235, 160, 0.95)';
+                    gctx.fillText(city.name, p.sx + dotSize + 4, p.sy + 4);
+
+                    // Event count badge
+                    const evtCount = _globeTC[key].events.length;
+                    if (evtCount > 1) {
+                        const badgeX = p.sx + dotSize + 4 + gctx.measureText(city.name).width + 4;
+                        gctx.font = `${Math.max(7, 8 * Math.min(globeZoom, 1.3))}px Montserrat, sans-serif`;
+                        gctx.fillStyle = 'rgba(255, 180, 100, 0.7)';
+                        gctx.fillText(`(${evtCount})`, badgeX, p.sy + 5);
+                    }
+                });
+            }
+
+            gctx.restore();
+
+            // Globe edge highlight
+            gctx.save();
+            gctx.beginPath();
+            gctx.arc(cx, cy, radius, 0, Math.PI * 2);
+            gctx.strokeStyle = 'rgba(100, 180, 255, 0.2)';
+            gctx.lineWidth = 1.5;
+            gctx.stroke();
+            gctx.restore();
+
+            globeAnimId = requestAnimationFrame(tick);
+        }
+        globeAnimId = requestAnimationFrame(tick);
+    }
+
+    function handleGlobeClick(e) {
+        if (CONFIG.MODES[currentMode] !== 'globe') return;
+        if (globeDragging) return;
+        const gc = document.getElementById('globeCanvas');
+        const rect = gc.getBoundingClientRect();
+        const mx = e.clientX - rect.left;
+        const my = e.clientY - rect.top;
+        const cx = window.innerWidth / 2;
+        const cy = window.innerHeight / 2;
+        const baseRadius = Math.min(window.innerWidth, window.innerHeight) * 0.32;
+        const radius = baseRadius * globeZoom;
+
+        if (!_globeTC || Object.keys(_globeTC).length === 0) return;
+
+        let clicked = null;
+        let clickedCity = null;
+        Object.keys(_globeTC).forEach(key => {
+            const city = _globeWC.find(c => c.nameEn === key);
+            if (!city) return;
+            const p = latLngToScreen(city.lat, city.lng, globeRotX, globeRotY, radius, cx, cy);
+            if (!p.visible) return;
+            const dist = Math.hypot(p.sx - mx, p.sy - my);
+            if (dist < 15 * globeZoom) {
+                clicked = key;
+                clickedCity = city;
+            }
+        });
+
+        const popup = document.getElementById('globePopup');
+        if (clicked) {
+            const data = _globeTC[clicked];
+            let html = `<span class="popup-close">&times;</span>`;
+            html += `<div class="popup-city">${clickedCity.name}</div>`;
+            data.events.forEach(ev => {
+                html += `<div class="popup-event">`;
+                html += `<span class="event-date">${ev.dateKey}</span>`;
+                html += `<span class="event-title">${ev.title}</span>`;
+                html += `<a class="event-link" href="index.html#gallery" data-date="${ev.dateKey}">照片</a>`;
+                html += `</div>`;
+            });
+            popup.innerHTML = html;
+            popup.style.left = Math.min(e.clientX + 10, window.innerWidth - 340) + 'px';
+            popup.style.top = Math.min(e.clientY - 20, window.innerHeight - 300) + 'px';
+            popup.classList.add('visible');
+            popup.querySelector('.popup-close').addEventListener('click', () => {
+                popup.classList.remove('visible');
+            });
+        } else {
+            popup.classList.remove('visible');
+        }
+    }
+
     // ===== MODE SWITCHING =====
     function switchMode(newMode) {
         if (newMode === currentMode) return;
@@ -491,8 +894,7 @@
     }
 
     function startAutoRotate() {
-        stopAutoRotate();
-        autoRotateTimer = setInterval(nextMode, CONFIG.MODE_AUTO_INTERVAL);
+        // disabled: no auto mode switching
     }
 
     function stopAutoRotate() {
@@ -828,6 +1230,38 @@
                 waterfallPaused = false;
             }
         });
+
+        // Globe interactions
+        const gc = document.getElementById('globeCanvas');
+        let globeClickMoved = false;
+        gc.addEventListener('mousedown', (e) => {
+            if (CONFIG.MODES[currentMode] !== 'globe') return;
+            globeDragging = true;
+            globeClickMoved = false;
+            globeDragStartX = e.clientX;
+            globeDragStartY = e.clientY;
+            globeDragStartRotX = globeRotX;
+            globeDragStartRotY = globeRotY;
+        });
+        gc.addEventListener('mousemove', (e) => {
+            if (!globeDragging) return;
+            const dx = e.clientX - globeDragStartX;
+            const dy = e.clientY - globeDragStartY;
+            if (Math.abs(dx) > 3 || Math.abs(dy) > 3) globeClickMoved = true;
+            globeRotY = globeDragStartRotY + dx * 0.005;
+            globeRotX = Math.max(-1.2, Math.min(1.2, globeDragStartRotX - dy * 0.005));
+        });
+        gc.addEventListener('mouseup', () => { globeDragging = false; });
+        gc.addEventListener('mouseleave', () => { globeDragging = false; });
+        gc.addEventListener('click', (e) => {
+            if (globeClickMoved) return;
+            handleGlobeClick(e);
+        });
+        gc.addEventListener('wheel', (e) => {
+            if (CONFIG.MODES[currentMode] !== 'globe') return;
+            e.preventDefault();
+            globeZoom = Math.max(0.4, Math.min(3.5, globeZoom - e.deltaY * 0.003));
+        }, { passive: false });
 
         // Resize
         window.addEventListener('resize', () => {

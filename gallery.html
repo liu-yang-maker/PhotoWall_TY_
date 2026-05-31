@@ -31,6 +31,8 @@
     </header>
 
     <main id="photoStage"></main>
+    <canvas id="globeCanvas"></canvas>
+    <div id="globePopup" class="globe-popup"></div>
 
     <div id="modeIndicator">
         <button data-mode="0" class="mode-tag active"><span class="mode-icon">&hearts;</span><span class="mode-name">爱心</span></button>
@@ -39,6 +41,7 @@
         <button data-mode="3" class="mode-tag"><span class="mode-icon">&#9678;</span><span class="mode-name">星环</span></button>
         <button data-mode="4" class="mode-tag"><span class="mode-icon">&#64;</span><span class="mode-name">漩涡</span></button>
         <button data-mode="5" class="mode-tag"><span class="mode-icon">&#9660;</span><span class="mode-name">瀑布</span></button>
+        <button data-mode="6" class="mode-tag"><span class="mode-icon">&#127757;</span><span class="mode-name">地球</span></button>
     </div>
 
     <footer id="galleryFooter">
@@ -64,6 +67,8 @@
         <img id="galleryPopupImg" src="" alt="">
     </div>
 
+    <script src="script.js"></script>
+    <script src="globe-data.js"></script>
     <script src="gallery.js"></script>
 </body>
 </html>

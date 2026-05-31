@@ -418,6 +418,127 @@ body {
     background: rgba(255, 255, 255, 0.1);
 }
 
+/* ===== Globe ===== */
+#globeCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 12;
+    display: none;
+    cursor: grab;
+}
+
+#globeCanvas.active {
+    display: block;
+}
+
+#globeCanvas:active {
+    cursor: grabbing;
+}
+
+.globe-popup {
+    position: fixed;
+    z-index: 200;
+    display: none;
+    background: rgba(15, 10, 30, 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    border-radius: 14px;
+    padding: 16px 20px;
+    min-width: 220px;
+    max-width: 320px;
+    max-height: 60vh;
+    overflow-y: auto;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(255, 215, 0, 0.08);
+    pointer-events: auto;
+}
+
+.globe-popup::-webkit-scrollbar {
+    width: 4px;
+}
+
+.globe-popup::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.globe-popup::-webkit-scrollbar-thumb {
+    background: rgba(255, 215, 0, 0.3);
+    border-radius: 4px;
+}
+
+.globe-popup.visible {
+    display: block;
+    animation: popIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.globe-popup .popup-city {
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.globe-popup .popup-event {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.globe-popup .popup-event:last-child {
+    border-bottom: none;
+}
+
+.globe-popup .event-date {
+    font-size: 11px;
+    color: var(--text-muted);
+    min-width: 75px;
+}
+
+.globe-popup .event-title {
+    font-size: 12px;
+    color: var(--text-light);
+    flex: 1;
+    margin: 0 8px;
+}
+
+.globe-popup .event-link {
+    font-size: 11px;
+    color: var(--accent-pink);
+    text-decoration: none;
+    white-space: nowrap;
+    padding: 3px 8px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 107, 157, 0.3);
+    transition: all 0.2s;
+}
+
+.globe-popup .event-link:hover {
+    background: rgba(255, 107, 157, 0.15);
+    border-color: rgba(255, 107, 157, 0.6);
+}
+
+.globe-popup .popup-close {
+    position: absolute;
+    top: 8px;
+    right: 12px;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    transition: color 0.2s;
+}
+
+.globe-popup .popup-close:hover {
+    color: #fff;
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 768px) {
     #galleryHeader {

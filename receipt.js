@@ -40,18 +40,47 @@
     // noise (thermal paper grain)
     const img = ctx.getImageData(0, 0, width, height);
     const data = img.data;
-    // low-cost noise: step pixels
     for (let y = 0; y < height; y += 2) {
       for (let x = 0; x < width; x += 2) {
         const i = (y * width + x) * 4;
-        const n = (Math.random() - 0.5) * 10; // subtle
+        const n = (Math.random() - 0.5) * 10;
         data[i] = Math.max(0, Math.min(255, data[i] + n));
         data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + n));
         data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + n));
-        // keep alpha 255
       }
     }
     ctx.putImageData(img, 0, 0);
+
+    // micro-fiber texture (paper fiber directionality)
+    ctx.strokeStyle = 'rgba(180, 170, 155, 0.04)';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < 150; i++) {
+      const fx = Math.random() * width;
+      const fy = Math.random() * height;
+      const angle = -0.2 + Math.random() * 0.4;
+      const len = 8 + Math.random() * 20;
+      ctx.beginPath();
+      ctx.moveTo(fx, fy);
+      ctx.lineTo(fx + Math.cos(angle) * len, fy + Math.sin(angle) * len);
+      ctx.stroke();
+    }
+
+    // edge aging effect (slight yellowing at edges)
+    const edgeL = ctx.createLinearGradient(0, 0, 40, 0);
+    edgeL.addColorStop(0, 'rgba(200, 180, 140, 0.06)');
+    edgeL.addColorStop(1, 'rgba(200, 180, 140, 0)');
+    ctx.fillStyle = edgeL;
+    ctx.fillRect(0, 0, 40, height);
+    const edgeR = ctx.createLinearGradient(width - 40, 0, width, 0);
+    edgeR.addColorStop(0, 'rgba(200, 180, 140, 0)');
+    edgeR.addColorStop(1, 'rgba(200, 180, 140, 0.06)');
+    ctx.fillStyle = edgeR;
+    ctx.fillRect(width - 40, 0, 40, height);
+    const edgeB = ctx.createLinearGradient(0, height - 60, 0, height);
+    edgeB.addColorStop(0, 'rgba(200, 180, 140, 0)');
+    edgeB.addColorStop(1, 'rgba(200, 180, 140, 0.08)');
+    ctx.fillStyle = edgeB;
+    ctx.fillRect(0, height - 60, width, 60);
 
     // header area
     ctx.fillStyle = 'rgba(0,0,0,0.06)';
@@ -300,7 +329,7 @@
                 this.particles[idx(i, j)],
                 this.particles[idx(i + 2, j)],
                 dx * 2,
-                0.28
+                0.30
               )
             );
           }
@@ -310,7 +339,7 @@
                 this.particles[idx(i, j)],
                 this.particles[idx(i, j + 2)],
                 dy * 2,
-                0.28
+                0.30
               )
             );
           }
@@ -418,10 +447,10 @@
   const paperMat = new THREE.MeshPhysicalMaterial({
     map: texture,
     color: 0xfaf6ee,
-    roughness: 0.92,
+    roughness: 0.90,
     metalness: 0.0,
-    clearcoat: 0.12,
-    clearcoatRoughness: 0.65,
+    clearcoat: 0.15,
+    clearcoatRoughness: 0.6,
     sheen: 0.0,
     side: THREE.DoubleSide,
   });

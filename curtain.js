@@ -20,44 +20,44 @@
     const ctx = c.getContext('2d');
 
     const base = ctx.createLinearGradient(0, 0, 0, height);
-    base.addColorStop(0, '#dcdcdc');
-    base.addColorStop(0.5, '#cfcfcf');
-    base.addColorStop(1, '#c5c5c5');
+    base.addColorStop(0, '#4a2e3a');
+    base.addColorStop(0.5, '#3d2530');
+    base.addColorStop(1, '#352028');
     ctx.fillStyle = base;
     ctx.fillRect(0, 0, width, height);
 
-    // 极淡的纵向丝缕（每条略有透明扰动，模拟雪纺/丝绸纹理）
-    for (let i = 0; i < 220; i++) {
+    // 纵向丝缕（深色丝绒纹理）
+    for (let i = 0; i < 260; i++) {
       const x = Math.random() * width;
       const w = 0.6 + Math.random() * 1.8;
-      const a = 0.025 + Math.random() * 0.05;
-      ctx.fillStyle = `rgba(255,255,255,${a})`;
+      const a = 0.03 + Math.random() * 0.06;
+      ctx.fillStyle = `rgba(255,220,220,${a})`;
       ctx.fillRect(x, 0, w, height);
-      ctx.fillStyle = `rgba(0,0,0,${a * 0.7})`;
+      ctx.fillStyle = `rgba(0,0,0,${a * 0.5})`;
       ctx.fillRect(x + w * 0.5, 0, w * 0.4, height);
     }
 
-    // 横向极弱织线，避免完全竖纹
-    for (let j = 0; j < 90; j++) {
+    // 横向织纹
+    for (let j = 0; j < 110; j++) {
       const y = Math.random() * height;
-      ctx.fillStyle = `rgba(255,255,255,${0.02 + Math.random() * 0.03})`;
+      ctx.fillStyle = `rgba(255,200,200,${0.02 + Math.random() * 0.03})`;
       ctx.fillRect(0, y, width, 0.6);
     }
 
-    // 颗粒噪声
+    // 颗粒噪声（深色布料用更细腻的噪点）
     const img = ctx.getImageData(0, 0, width, height);
     const data = img.data;
     for (let i = 0; i < data.length; i += 4) {
-      const n = (Math.random() - 0.5) * 14;
+      const n = (Math.random() - 0.5) * 10;
       data[i] = Math.max(0, Math.min(255, data[i] + n));
       data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + n));
       data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + n));
     }
     ctx.putImageData(img, 0, 0);
 
-    // 顶部"挂杆/穿杆"暗带 —— 让人读出"挂着的布"
+    // 顶部"挂杆"暗带
     const top = ctx.createLinearGradient(0, 0, 0, 60);
-    top.addColorStop(0, 'rgba(0,0,0,0.18)');
+    top.addColorStop(0, 'rgba(0,0,0,0.25)');
     top.addColorStop(1, 'rgba(0,0,0,0)');
     ctx.fillStyle = top;
     ctx.fillRect(0, 0, width, 60);
@@ -321,16 +321,16 @@
 
   const curtainMat = new THREE.MeshPhysicalMaterial({
     map: fabricTex,
-    color: 0xb9b9b9,
-    roughness: 0.86,
+    color: 0x5a3e4a,
+    roughness: 0.82,
     metalness: 0.0,
-    sheen: 0.35,
-    sheenColor: new THREE.Color(0xffffff),
-    sheenRoughness: 0.6,
-    clearcoat: 0.05,
-    clearcoatRoughness: 0.85,
+    sheen: 0.45,
+    sheenColor: new THREE.Color(0xdda0a0),
+    sheenRoughness: 0.55,
+    clearcoat: 0.06,
+    clearcoatRoughness: 0.8,
     transparent: true,
-    opacity: 0.94, // 隐形/半透 —— 大致遮住，但能感到背后微微透出，掀起更有戏剧感
+    opacity: 0.99,
     side: THREE.DoubleSide,
     depthWrite: true,
   });
