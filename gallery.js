@@ -72,6 +72,13 @@
     let _globeWC = null;
     let _globeCB = null;
     let _globeCountries = null;
+    let _geoFeatures = null; // Natural Earth GeoJSON features
+
+    // China flat map easter egg state
+    let chinaMapMode = false;
+    let chinaMapTransition = 0; // 0-1 for crossfade
+    let chinaClickCount = 0;
+    let chinaClickTimer = null;
 
     // ===== INIT =====
     async function init() {
@@ -86,6 +93,7 @@
         _globeWC = (typeof WORLD_CITIES !== 'undefined') ? WORLD_CITIES : [];
         _globeCB = (typeof COUNTRY_BORDERS !== 'undefined') ? COUNTRY_BORDERS : [];
         _globeCountries = (typeof COUNTRIES !== 'undefined') ? COUNTRIES : [];
+        loadGeoData();
         applyLayout('heart');
         startAutoRotate();
         bindEvents();
@@ -102,6 +110,19 @@
             });
         } catch (e) {
             console.error('Failed to load image_list.json', e);
+        }
+    }
+
+    async function loadGeoData() {
+        try {
+            const res = await fetch('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json');
+            const topology = await res.json();
+            if (window.topojson) {
+                const geojson = topojson.feature(topology, topology.objects.countries);
+                _geoFeatures = geojson.features;
+            }
+        } catch (e) {
+            console.error('Failed to load geo data', e);
         }
     }
 
@@ -568,6 +589,8 @@
         const popup = document.getElementById('globePopup');
         popup.classList.remove('visible');
         photoElements.forEach(el => { el.style.pointerEvents = ''; });
+        chinaMapMode = false;
+        chinaMapTransition = 0;
     }
 
     function latLngToScreen(lat, lng, rotX, rotY, radius, cx, cy) {
@@ -665,6 +688,18 @@
             gctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
             gctx.clearRect(0, 0, w, h);
 
+            // Handle China map mode with crossfade
+            if (chinaMapMode) {
+                if (chinaMapTransition < 1) chinaMapTransition = Math.min(1, chinaMapTransition + 0.04);
+                gctx.globalAlpha = chinaMapTransition;
+                renderChinaMap(gctx, w, h);
+                gctx.globalAlpha = 1;
+                globeAnimId = requestAnimationFrame(tick);
+                return;
+            } else if (chinaMapTransition > 0) {
+                chinaMapTransition = Math.max(0, chinaMapTransition - 0.04);
+            }
+
             const cx = w / 2;
             const cy = h / 2;
             const baseRadius = Math.min(w, h) * 0.32;
@@ -747,12 +782,64 @@
                 gctx.stroke();
             }
 
-            // Country borders (filled polygons, support multi-polygon)
-            if (_globeCB.length > 0) {
+            // Country borders from Natural Earth GeoJSON (accurate)
+            if (_geoFeatures && _geoFeatures.length > 0) {
+                _geoFeatures.forEach(feature => {
+                    const geom = feature.geometry;
+                    if (!geom) return;
+                    let polygons;
+                    if (geom.type === 'Polygon') {
+                        polygons = [geom.coordinates];
+                    } else if (geom.type === 'MultiPolygon') {
+                        polygons = geom.coordinates;
+                    } else return;
+
+                    // Check if this is China (id "156" in Natural Earth)
+                    const id = feature.id || (feature.properties && feature.properties.iso_n3);
+                    const isChina = (id === '156' || id === '158'); // 156=China, 158=Taiwan
+
+                    polygons.forEach(polygon => {
+                        const ring = polygon[0]; // outer ring
+                        if (!ring || ring.length < 3) return;
+
+                        let anyVisible = false;
+                        const screenPts = ring.map(coord => {
+                            const p = latLngToScreen(coord[1], coord[0], globeRotX, globeRotY, radius, cx, cy);
+                            if (p.visible) anyVisible = true;
+                            return p;
+                        });
+                        if (!anyVisible) return;
+
+                        if (drawSmoothPolygon(gctx, screenPts)) {
+                            if (isChina) {
+                                const centerX = screenPts.reduce((s, p) => s + p.sx, 0) / screenPts.length;
+                                const centerY = screenPts.reduce((s, p) => s + p.sy, 0) / screenPts.length;
+                                const grad = gctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius * 0.5);
+                                grad.addColorStop(0, 'rgba(200, 80, 60, 0.30)');
+                                grad.addColorStop(0.7, 'rgba(180, 60, 50, 0.18)');
+                                grad.addColorStop(1, 'rgba(150, 40, 40, 0.08)');
+                                gctx.fillStyle = grad;
+                                gctx.strokeStyle = 'rgba(255, 180, 100, 0.65)';
+                                gctx.lineWidth = 1.3;
+                                gctx.shadowColor = 'rgba(255, 180, 100, 0.25)';
+                                gctx.shadowBlur = 3;
+                            } else {
+                                gctx.fillStyle = 'rgba(55, 130, 85, 0.18)';
+                                gctx.strokeStyle = 'rgba(80, 170, 110, 0.30)';
+                                gctx.lineWidth = 0.6;
+                                gctx.shadowBlur = 0;
+                            }
+                            gctx.fill();
+                            gctx.stroke();
+                            gctx.shadowBlur = 0;
+                        }
+                    });
+                });
+            } else if (_globeCB.length > 0) {
+                // Fallback to hand-crafted data
                 _globeCB.forEach(country => {
                     if (country.type === 'dashed') return;
                     const isHighlight = country.color === 'highlight';
-
                     if (country.polygons) {
                         country.polygons.forEach(poly => {
                             renderCountryPolygon(gctx, poly, globeRotX, globeRotY, radius, cx, cy, isHighlight);
@@ -941,6 +1028,185 @@
         globeAnimId = requestAnimationFrame(tick);
     }
 
+    // ===== CHINA FLAT MAP EASTER EGG =====
+    function chinaProject(lat, lng, w, h) {
+        const padding = 100;
+        const mapW = w - padding * 2;
+        const mapH = h - padding * 2;
+        const x = padding + ((lng - 73) / (135 - 73)) * mapW;
+        const y = padding + ((54 - lat) / (54 - 18)) * mapH;
+        return { x, y };
+    }
+
+    function enterChinaMap() {
+        chinaMapMode = true;
+        chinaMapTransition = 0;
+    }
+
+    function exitChinaMap() {
+        chinaMapMode = false;
+        chinaMapTransition = 1;
+        const popup = document.getElementById('globePopup');
+        popup.classList.remove('visible');
+    }
+
+    function renderChinaMap(gctx, w, h) {
+        // Background
+        const bgGrad = gctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, Math.max(w,h)*0.6);
+        bgGrad.addColorStop(0, '#1a2a4a');
+        bgGrad.addColorStop(1, '#0a0a1a');
+        gctx.fillStyle = bgGrad;
+        gctx.fillRect(0, 0, w, h);
+
+        // Draw China outline from GeoJSON
+        if (_geoFeatures) {
+            _geoFeatures.forEach(feature => {
+                const id = feature.id || (feature.properties && feature.properties.iso_n3);
+                if (id !== '156' && id !== '158') return; // China + Taiwan
+                const geom = feature.geometry;
+                if (!geom) return;
+                let polygons = geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates;
+
+                polygons.forEach(polygon => {
+                    const ring = polygon[0];
+                    if (!ring || ring.length < 3) return;
+                    gctx.beginPath();
+                    ring.forEach((coord, i) => {
+                        const p = chinaProject(coord[1], coord[0], w, h);
+                        if (i === 0) gctx.moveTo(p.x, p.y);
+                        else gctx.lineTo(p.x, p.y);
+                    });
+                    gctx.closePath();
+
+                    // Fill with warm gradient
+                    const grad = gctx.createLinearGradient(w*0.3, h*0.2, w*0.7, h*0.8);
+                    grad.addColorStop(0, 'rgba(180, 70, 50, 0.25)');
+                    grad.addColorStop(0.5, 'rgba(160, 55, 45, 0.20)');
+                    grad.addColorStop(1, 'rgba(140, 40, 35, 0.15)');
+                    gctx.fillStyle = grad;
+                    gctx.fill();
+                    gctx.strokeStyle = 'rgba(255, 180, 100, 0.6)';
+                    gctx.lineWidth = 1.5;
+                    gctx.shadowColor = 'rgba(255, 180, 100, 0.3)';
+                    gctx.shadowBlur = 4;
+                    gctx.stroke();
+                    gctx.shadowBlur = 0;
+                });
+            });
+        } else if (_globeCB.length > 0) {
+            // Fallback: use hand-crafted China data
+            _globeCB.forEach(country => {
+                if (country.color !== 'highlight') return;
+                if (!country.points) return;
+                gctx.beginPath();
+                country.points.forEach((pt, i) => {
+                    const p = chinaProject(pt[0], pt[1], w, h);
+                    if (i === 0) gctx.moveTo(p.x, p.y);
+                    else gctx.lineTo(p.x, p.y);
+                });
+                gctx.closePath();
+                gctx.fillStyle = 'rgba(180, 70, 50, 0.22)';
+                gctx.fill();
+                gctx.strokeStyle = 'rgba(255, 180, 100, 0.6)';
+                gctx.lineWidth = 1.5;
+                gctx.stroke();
+            });
+        }
+
+        // Draw CN cities (non-travel)
+        const cnCities = _globeWC.filter(c => c.country === 'CN');
+        const fontSize = Math.max(9, Math.min(w, h) * 0.012);
+        cnCities.forEach(city => {
+            const isTravel = _globeTC && _globeTC[city.nameEn];
+            if (isTravel) return;
+            const p = chinaProject(city.lat, city.lng, w, h);
+            if (p.x < 50 || p.x > w-50 || p.y < 50 || p.y > h-50) return;
+            gctx.beginPath();
+            gctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
+            gctx.fillStyle = 'rgba(160, 180, 200, 0.55)';
+            gctx.fill();
+            gctx.font = `${fontSize}px Montserrat, sans-serif`;
+            gctx.fillStyle = 'rgba(160, 185, 210, 0.5)';
+            gctx.fillText(city.name, p.x + 5, p.y + 3);
+        });
+
+        // Draw travel cities (gold pulsing)
+        if (_globeTC) {
+            const pulse = 1 + 0.25 * Math.sin(globeTime * 0.05);
+            Object.keys(_globeTC).forEach(key => {
+                const city = _globeWC.find(c => c.nameEn === key);
+                if (!city || city.country !== 'CN') return;
+                const p = chinaProject(city.lat, city.lng, w, h);
+                const dotSize = 5 * pulse;
+
+                // Glow
+                const areaGrad = gctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, dotSize * 4);
+                areaGrad.addColorStop(0, 'rgba(255, 215, 0, 0.2)');
+                areaGrad.addColorStop(0.5, 'rgba(255, 200, 50, 0.06)');
+                areaGrad.addColorStop(1, 'rgba(255, 200, 50, 0)');
+                gctx.fillStyle = areaGrad;
+                gctx.beginPath();
+                gctx.arc(p.x, p.y, dotSize * 4, 0, Math.PI * 2);
+                gctx.fill();
+
+                // Dot
+                gctx.beginPath();
+                gctx.arc(p.x, p.y, dotSize, 0, Math.PI * 2);
+                const dotGrad = gctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, dotSize);
+                dotGrad.addColorStop(0, 'rgba(255, 240, 180, 1)');
+                dotGrad.addColorStop(1, 'rgba(255, 180, 0, 0.8)');
+                gctx.fillStyle = dotGrad;
+                gctx.fill();
+                gctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+                gctx.lineWidth = 1.2;
+                gctx.stroke();
+
+                // Label
+                const labelSize = Math.max(11, Math.min(w, h) * 0.015);
+                gctx.font = `bold ${labelSize}px Montserrat, sans-serif`;
+                gctx.fillStyle = 'rgba(255, 235, 160, 0.95)';
+                gctx.fillText(city.name, p.x + dotSize + 5, p.y + 4);
+
+                // Event count
+                const evtCount = _globeTC[key].events.length;
+                if (evtCount > 1) {
+                    const badgeX = p.x + dotSize + 5 + gctx.measureText(city.name).width + 4;
+                    gctx.font = `${Math.max(9, labelSize - 2)}px Montserrat, sans-serif`;
+                    gctx.fillStyle = 'rgba(255, 180, 100, 0.7)';
+                    gctx.fillText(`(${evtCount})`, badgeX, p.y + 4);
+                }
+            });
+        }
+
+        // Title
+        gctx.font = `bold ${Math.max(14, w * 0.016)}px Montserrat, sans-serif`;
+        gctx.fillStyle = 'rgba(255, 235, 180, 0.8)';
+        gctx.fillText('我们的中国足迹', w / 2 - gctx.measureText('我们的中国足迹').width / 2, 60);
+
+        // Back button
+        const btnX = 30, btnY = h - 60, btnW = 110, btnH = 36;
+        const r = 18;
+        gctx.fillStyle = 'rgba(30, 25, 50, 0.8)';
+        gctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+        gctx.lineWidth = 1;
+        gctx.beginPath();
+        gctx.moveTo(btnX + r, btnY);
+        gctx.lineTo(btnX + btnW - r, btnY);
+        gctx.arcTo(btnX + btnW, btnY, btnX + btnW, btnY + r, r);
+        gctx.lineTo(btnX + btnW, btnY + btnH - r);
+        gctx.arcTo(btnX + btnW, btnY + btnH, btnX + btnW - r, btnY + btnH, r);
+        gctx.lineTo(btnX + r, btnY + btnH);
+        gctx.arcTo(btnX, btnY + btnH, btnX, btnY + btnH - r, r);
+        gctx.lineTo(btnX, btnY + r);
+        gctx.arcTo(btnX, btnY, btnX + r, btnY, r);
+        gctx.closePath();
+        gctx.fill();
+        gctx.stroke();
+        gctx.font = '13px Montserrat, sans-serif';
+        gctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+        gctx.fillText('← 返回地球', btnX + 16, btnY + 23);
+    }
+
     function handleGlobeClick(e) {
         if (CONFIG.MODES[currentMode] !== 'globe') return;
         if (globeDragging) return;
@@ -948,11 +1214,80 @@
         const rect = gc.getBoundingClientRect();
         const mx = e.clientX - rect.left;
         const my = e.clientY - rect.top;
-        const cx = window.innerWidth / 2;
-        const cy = window.innerHeight / 2;
-        const baseRadius = Math.min(window.innerWidth, window.innerHeight) * 0.32;
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+
+        // === China flat map mode click handling ===
+        if (chinaMapMode) {
+            // Check back button
+            const btnX = 30, btnY = h - 60, btnW = 110, btnH = 36;
+            if (mx >= btnX && mx <= btnX + btnW && my >= btnY && my <= btnY + btnH) {
+                exitChinaMap();
+                return;
+            }
+
+            // Check travel city clicks
+            if (_globeTC) {
+                let clickedKey = null;
+                let clickedCity = null;
+                Object.keys(_globeTC).forEach(key => {
+                    const city = _globeWC.find(c => c.nameEn === key);
+                    if (!city || city.country !== 'CN') return;
+                    const p = chinaProject(city.lat, city.lng, w, h);
+                    const dist = Math.hypot(p.x - mx, p.y - my);
+                    if (dist < 20) { clickedKey = key; clickedCity = city; }
+                });
+
+                const popup = document.getElementById('globePopup');
+                if (clickedKey) {
+                    const data = _globeTC[clickedKey];
+                    let html = `<span class="popup-close">&times;</span>`;
+                    html += `<div class="popup-city">${clickedCity.name}</div>`;
+                    data.events.forEach(ev => {
+                        html += `<div class="popup-event">`;
+                        html += `<span class="event-date">${ev.dateKey}</span>`;
+                        html += `<span class="event-title">${ev.title}</span>`;
+                        html += `<a class="event-link" href="index.html#gallery" data-date="${ev.dateKey}">照片</a>`;
+                        html += `</div>`;
+                    });
+                    popup.innerHTML = html;
+                    popup.style.left = Math.min(e.clientX + 10, w - 340) + 'px';
+                    popup.style.top = Math.min(e.clientY - 20, h - 300) + 'px';
+                    popup.classList.add('visible');
+                    popup.querySelector('.popup-close').addEventListener('click', () => {
+                        popup.classList.remove('visible');
+                    });
+                } else {
+                    popup.classList.remove('visible');
+                }
+            }
+            return;
+        }
+
+        // === Globe mode click handling ===
+        const cx = w / 2;
+        const cy = h / 2;
+        const baseRadius = Math.min(w, h) * 0.32;
         const radius = baseRadius * globeZoom;
 
+        // Check if click is on China area (for double-click easter egg)
+        const chinaCenter = latLngToScreen(35, 104, globeRotX, globeRotY, radius, cx, cy);
+        if (chinaCenter.visible) {
+            const distToChina = Math.hypot(chinaCenter.sx - mx, chinaCenter.sy - my);
+            if (distToChina < radius * 0.35) {
+                chinaClickCount++;
+                if (chinaClickCount >= 2) {
+                    chinaClickCount = 0;
+                    if (chinaClickTimer) { clearTimeout(chinaClickTimer); chinaClickTimer = null; }
+                    enterChinaMap();
+                    return;
+                }
+                if (chinaClickTimer) clearTimeout(chinaClickTimer);
+                chinaClickTimer = setTimeout(() => { chinaClickCount = 0; }, 500);
+            }
+        }
+
+        // City click detection
         if (!_globeTC || Object.keys(_globeTC).length === 0) return;
 
         let clicked = null;
@@ -982,8 +1317,8 @@
                 html += `</div>`;
             });
             popup.innerHTML = html;
-            popup.style.left = Math.min(e.clientX + 10, window.innerWidth - 340) + 'px';
-            popup.style.top = Math.min(e.clientY - 20, window.innerHeight - 300) + 'px';
+            popup.style.left = Math.min(e.clientX + 10, w - 340) + 'px';
+            popup.style.top = Math.min(e.clientY - 20, h - 300) + 'px';
             popup.classList.add('visible');
             popup.querySelector('.popup-close').addEventListener('click', () => {
                 popup.classList.remove('visible');
@@ -1389,6 +1724,7 @@
         let globeClickMoved = false;
         gc.addEventListener('mousedown', (e) => {
             if (CONFIG.MODES[currentMode] !== 'globe') return;
+            if (chinaMapMode) return;
             globeDragging = true;
             globeClickMoved = false;
             globeDragStartX = e.clientX;
@@ -1407,11 +1743,12 @@
         gc.addEventListener('mouseup', () => { globeDragging = false; });
         gc.addEventListener('mouseleave', () => { globeDragging = false; });
         gc.addEventListener('click', (e) => {
-            if (globeClickMoved) return;
+            if (globeClickMoved && !chinaMapMode) return;
             handleGlobeClick(e);
         });
         gc.addEventListener('wheel', (e) => {
             if (CONFIG.MODES[currentMode] !== 'globe') return;
+            if (chinaMapMode) return;
             e.preventDefault();
             globeZoom = Math.max(0.4, Math.min(3.5, globeZoom - e.deltaY * 0.003));
         }, { passive: false });
