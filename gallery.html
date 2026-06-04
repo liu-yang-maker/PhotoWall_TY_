@@ -38,7 +38,18 @@
         <canvas id="chinaMapParticleCanvas" class="china-map-particles"></canvas>
         <div class="china-map-header">
             <h2 class="china-map-title">我们的中国足迹</h2>
-            <div class="china-stats">已去过 <span id="visitedCount">0</span> / 34 省</div>
+            <div class="china-header-stats">
+                <div class="china-progress-wrap">
+                    <div class="china-progress-bar" id="chinaProgressBar"></div>
+                    <span class="china-progress-text" id="chinaProgressText">0%</span>
+                </div>
+                <div class="china-stats-row">
+                    <span class="china-stat-item"><span class="stat-num" id="visitedCount">0</span>/34 省</span>
+                    <span class="china-stat-item"><span class="stat-num" id="visitedCityCount">0</span> 城市</span>
+                    <span class="china-stat-item"><span class="stat-num" id="totalTripCount">0</span> 次旅行</span>
+                </div>
+                <div class="china-achievements" id="chinaAchievements"></div>
+            </div>
         </div>
         <div class="china-map-loading" id="chinaMapLoading">
             <div class="loading-spinner"></div>

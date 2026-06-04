@@ -1332,13 +1332,15 @@
         document.getElementById('provincePanelName').textContent = provinceInfo.name;
         document.getElementById('provincePanelSub').textContent = provinceInfo.nameEn;
 
+        const firstDate = allEvents.length > 0 ? allEvents[0].dateKey : '';
         document.getElementById('provincePanelStats').innerHTML =
             `<div class="stat-badge"><strong>${visitedCities.length}</strong>城市</div>` +
-            `<div class="stat-badge"><strong>${allEvents.length}</strong>次旅行</div>`;
+            `<div class="stat-badge"><strong>${allEvents.length}</strong>次旅行</div>` +
+            (firstDate ? `<div class="stat-badge"><strong>${firstDate}</strong>首次</div>` : '');
 
         let tripsHtml = '<div class="trips-title">旅行足迹</div>';
-        allEvents.forEach(ev => {
-            tripsHtml += `<div class="trip-item">
+        allEvents.forEach((ev, i) => {
+            tripsHtml += `<div class="trip-item" style="animation-delay:${200 + i * 80}ms">
                 <span class="trip-date">${ev.dateKey}</span>
                 <span class="trip-title">${ev.title}</span>
             </div>`;
@@ -1359,8 +1361,8 @@
         let photosHtml = '';
         if (matchedPhotos.length > 0) {
             photosHtml = '<div class="photos-title">记忆碎片</div><div class="photo-grid">';
-            matchedPhotos.forEach(img => {
-                photosHtml += `<div class="photo-thumb" data-img="${img}"><img src="images/thumbs/${img}" alt="" loading="lazy" onerror="this.src='images/${img}'"></div>`;
+            matchedPhotos.forEach((img, i) => {
+                photosHtml += `<div class="photo-thumb" data-img="${img}" style="animation-delay:${400 + i * 60}ms"><img src="images/thumbs/${img}" alt="" loading="lazy" onerror="this.src='images/${img}'"></div>`;
             });
             photosHtml += '</div>';
         }
@@ -1381,6 +1383,34 @@
 
     function hideProvinceDetailPanel() {
         document.getElementById('provinceDetailPanel').classList.remove('visible');
+    }
+
+    // ===== STATS HELPERS =====
+    function animateCountUp(elementId, target, duration) {
+        const el = document.getElementById(elementId);
+        if (!el || target === 0) { if (el) el.textContent = '0'; return; }
+        const start = Date.now();
+        function step() {
+            const elapsed = Date.now() - start;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            el.textContent = Math.round(eased * target);
+            if (progress < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+    }
+
+    function computeAchievements(visitedProvinces, totalTrips) {
+        const badges = [];
+        if (totalTrips >= 1) badges.push('✨ 初次旅行');
+        const northCodes = ['110000','120000','130000','140000','150000','210000','220000','230000','370000','610000','620000','630000','640000','650000'];
+        const southCodes = ['440000','450000','460000','530000','520000','510000','500000','430000','350000','330000'];
+        const hasNorth = northCodes.some(c => visitedProvinces.has(c));
+        const hasSouth = southCodes.some(c => visitedProvinces.has(c));
+        if (hasNorth && hasSouth) badges.push('🧭 南北纵横');
+        if (visitedProvinces.size >= 17) badges.push('🏆 半壁江山');
+        if (visitedProvinces.size >= 5) badges.push('🗺️ 旅行达人');
+        return badges;
     }
 
     // ===== TRAVEL ROUTE LINES =====
@@ -1527,6 +1557,16 @@
 
             const visitedProvinces = getVisitedProvinces();
 
+            // SVG glow filter for visited provinces
+            const defs = createSVGEl('defs', {});
+            const glowFilter = createSVGEl('filter', { id: 'visitedGlow', x: '-20%', y: '-20%', width: '140%', height: '140%' });
+            const feBlur = createSVGEl('feGaussianBlur', { stdDeviation: '3', result: 'blur' });
+            const feComposite = createSVGEl('feComposite', { in: 'SourceGraphic', in2: 'blur', operator: 'over' });
+            glowFilter.appendChild(feBlur);
+            glowFilter.appendChild(feComposite);
+            defs.appendChild(glowFilter);
+            svg.appendChild(defs);
+
             // Provinces group
             const g = createSVGEl('g', { class: 'provinces-group' });
             g.id = 'provincesGroup';
@@ -1565,8 +1605,33 @@
             renderCityMarkersSVG(cityGroup, visitedProvinces);
             svg.appendChild(cityGroup);
 
-            // Update stats
-            document.getElementById('visitedCount').textContent = visitedProvinces.size;
+            // Update stats with animated countUp
+            const totalCities = _globeTC ? Object.keys(_globeTC).filter(c => {
+                const city = _globeWC && _globeWC.find(wc => wc.nameEn === c);
+                return city && city.country === 'CN';
+            }).length : 0;
+            let totalTrips = 0;
+            if (_globeTC) Object.keys(_globeTC).forEach(c => {
+                const city = _globeWC && _globeWC.find(wc => wc.nameEn === c);
+                if (city && city.country === 'CN') totalTrips += _globeTC[c].events.length;
+            });
+            const pct = Math.round((visitedProvinces.size / 34) * 100);
+
+            animateCountUp('visitedCount', visitedProvinces.size, 2000);
+            animateCountUp('visitedCityCount', totalCities, 2200);
+            animateCountUp('totalTripCount', totalTrips, 2400);
+
+            setTimeout(() => {
+                document.getElementById('chinaProgressBar').style.width = pct + '%';
+                document.getElementById('chinaProgressText').textContent = pct + '%';
+            }, 500);
+
+            // Achievements
+            const achievements = computeAchievements(visitedProvinces, totalTrips);
+            const achEl = document.getElementById('chinaAchievements');
+            achEl.innerHTML = achievements.map((a, i) =>
+                `<span class="china-badge" style="animation-delay:${3000 + i * 200}ms">${a}</span>`
+            ).join('');
 
             // Bind back buttons
             document.getElementById('chinaBackBtn').addEventListener('click', exitChinaMap);
@@ -1677,9 +1742,35 @@
         if (provinceInfo) {
             html += `<div class="tooltip-sub">${provinceInfo.nameEn}${isVisited ? ' · 已去过' : ''}</div>`;
         }
+
+        if (isVisited && provinceInfo && _globeTC) {
+            const cities = provinceInfo.cities || [];
+            const visitedCities = cities.filter(c => _globeTC[c]);
+            let tripCount = 0;
+            let firstDate = null;
+            visitedCities.forEach(c => {
+                const evts = _globeTC[c].events;
+                tripCount += evts.length;
+                evts.forEach(ev => {
+                    if (!firstDate || ev.dateKey < firstDate) firstDate = ev.dateKey;
+                });
+            });
+            html += '<div class="tooltip-divider"></div>';
+            html += `<div class="tooltip-stats">${visitedCities.length} 城市 · ${tripCount} 次旅行</div>`;
+            if (firstDate) html += `<div class="tooltip-stats">首次: ${firstDate}</div>`;
+        } else if (!isVisited) {
+            html += '<div class="tooltip-hint">等我们一起去探索吧~</div>';
+        }
+
         tooltip.innerHTML = html;
         tooltip.classList.add('visible');
         moveTooltip(e);
+
+        // Route highlight
+        const routeGroup = document.getElementById('routeLinesGroup');
+        if (routeGroup && isVisited) {
+            routeGroup.classList.add('route-highlight');
+        }
     }
 
     function moveTooltip(e) {
@@ -1690,6 +1781,8 @@
 
     function onProvinceLeave() {
         document.getElementById('chinaTooltip').classList.remove('visible');
+        const routeGroup = document.getElementById('routeLinesGroup');
+        if (routeGroup) routeGroup.classList.remove('route-highlight');
     }
 
     function onProvinceClick(e, feature, isVisited) {
@@ -1700,6 +1793,18 @@
             path.style.animation = '';
             return;
         }
+        // Click ripple effect
+        const svg = document.getElementById('chinaMapSvg');
+        const rect = svg.getBoundingClientRect();
+        const ripple = createSVGEl('circle', {
+            cx: e.clientX - rect.left,
+            cy: e.clientY - rect.top,
+            r: '5',
+            class: 'click-ripple'
+        });
+        svg.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 800);
+
         const adcode = String(feature.properties.adcode);
         zoomToProvince(adcode, feature);
         showProvinceDetailPanel(adcode);

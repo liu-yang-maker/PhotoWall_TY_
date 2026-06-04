@@ -564,20 +564,20 @@ body {
 
 .china-map-header {
     position: absolute;
-    top: 80px;
+    top: 28px;
     left: 0;
     right: 0;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 24px;
+    gap: 10px;
     z-index: 10;
     animation: fadeSlideDown 0.8s 0.3s both;
 }
 
 .china-map-title {
     font-family: 'Ma Shan Zheng', cursive;
-    font-size: clamp(22px, 3vw, 36px);
+    font-size: clamp(20px, 2.5vw, 30px);
     color: rgba(255, 235, 180, 0.9);
     text-shadow: 0 0 20px rgba(255, 200, 100, 0.3);
     margin: 0;
@@ -585,20 +585,76 @@ body {
     letter-spacing: 2px;
 }
 
-.china-stats {
-    font-family: 'Montserrat', sans-serif;
-    font-size: 13px;
-    color: rgba(255, 200, 160, 0.8);
-    background: rgba(255, 140, 160, 0.12);
-    border: 1px solid rgba(255, 140, 160, 0.25);
-    padding: 6px 16px;
-    border-radius: 20px;
-    backdrop-filter: blur(8px);
+.china-header-stats {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
 }
 
-.china-stats span {
+.china-progress-wrap {
+    position: relative;
+    width: 200px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.china-progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #ffd700, #ff6b9d);
+    border-radius: 3px;
+    transition: width 2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+}
+
+.china-progress-text {
+    position: absolute;
+    right: -36px;
+    top: -3px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 10px;
+    color: rgba(255, 215, 0, 0.8);
+}
+
+.china-stats-row {
+    display: flex;
+    gap: 16px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    color: rgba(255, 200, 160, 0.7);
+}
+
+.china-stat-item .stat-num {
     font-weight: 700;
-    color: rgba(255, 160, 180, 1);
+    color: rgba(255, 215, 0, 0.9);
+    font-size: 13px;
+    margin-right: 2px;
+}
+
+.china-achievements {
+    display: flex;
+    gap: 8px;
+    margin-top: 2px;
+}
+
+.china-badge {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 10px;
+    color: rgba(255, 235, 180, 0.9);
+    background: rgba(255, 215, 0, 0.1);
+    border: 1px solid rgba(255, 215, 0, 0.25);
+    border-radius: 12px;
+    padding: 3px 10px;
+    backdrop-filter: blur(6px);
+    animation: badgePopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes badgePopIn {
+    from { opacity: 0; transform: scale(0.6); }
+    to { opacity: 1; transform: scale(1); }
 }
 
 #chinaMapSvg {
@@ -625,7 +681,9 @@ body {
     cursor: pointer;
     transition: fill 0.3s, stroke 0.3s, stroke-width 0.3s, opacity 0.4s, filter 0.3s;
     opacity: 0;
-    animation: provinceFadeIn 0.6s forwards;
+    transform-origin: center;
+    transform-box: fill-box;
+    animation: provinceExpand 0.7s cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
 }
 
 .province-visited {
@@ -667,7 +725,7 @@ body {
 .city-marker {
     cursor: pointer;
     opacity: 0;
-    animation: cityPopIn 0.4s forwards;
+    animation: cityPopIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 .city-marker circle.marker-dot {
@@ -711,14 +769,17 @@ body {
 .china-tooltip {
     position: fixed;
     z-index: 100;
-    background: rgba(15, 10, 30, 0.9);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 200, 180, 0.25);
-    border-radius: 8px;
-    padding: 8px 14px;
+    background: rgba(12, 8, 28, 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 215, 0, 0.15);
+    border-radius: 10px;
+    padding: 10px 16px;
     font-family: 'Montserrat', sans-serif;
     font-size: 13px;
     color: rgba(255, 240, 220, 0.9);
+    min-width: 160px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     pointer-events: none;
     opacity: 0;
     transform: translateY(4px);
@@ -733,12 +794,115 @@ body {
 
 .china-tooltip .tooltip-name {
     font-weight: 600;
+    font-size: 14px;
 }
 
 .china-tooltip .tooltip-sub {
     font-size: 11px;
     color: rgba(200, 200, 220, 0.6);
     margin-top: 2px;
+}
+
+.china-tooltip .tooltip-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 215, 0, 0.3), transparent);
+    margin: 6px 0;
+}
+
+.china-tooltip .tooltip-stats {
+    font-size: 11px;
+    color: rgba(255, 215, 0, 0.8);
+    margin-top: 4px;
+}
+
+.china-tooltip .tooltip-hint {
+    font-size: 10px;
+    color: rgba(180, 180, 200, 0.5);
+    margin-top: 4px;
+    font-style: italic;
+}
+
+/* Click Ripple Effect */
+.click-ripple {
+    fill: none;
+    stroke: rgba(255, 215, 0, 0.6);
+    stroke-width: 2;
+    transform-origin: center;
+    animation: clickRipple 0.8s ease-out forwards;
+    pointer-events: none;
+}
+
+@keyframes clickRipple {
+    from { r: 5; opacity: 0.7; }
+    to { r: 60; opacity: 0; }
+}
+
+/* Route Highlight on Province Hover */
+.route-lines-group.route-highlight path {
+    stroke-width: 3;
+    filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.6));
+}
+
+/* Province visited glow */
+.province-visited {
+    filter: url(#visitedGlow);
+}
+
+/* Enhanced province entrance */
+@keyframes provinceExpand {
+    from { opacity: 0; transform: scale(0.7); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* Panel stagger animation */
+@keyframes panelItemIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.province-panel-trips .trip-item {
+    opacity: 0;
+    animation: panelItemIn 0.4s ease-out forwards;
+    position: relative;
+}
+
+.province-panel-trips .trip-item::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 50%;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255, 215, 0, 0.7);
+    transform: translateY(-50%);
+    box-shadow: 0 0 4px rgba(255, 215, 0, 0.4);
+}
+
+.province-panel-trips .trip-item::after {
+    content: '';
+    position: absolute;
+    left: 6.5px;
+    top: calc(50% + 6px);
+    width: 1px;
+    height: calc(100% - 6px);
+    background: rgba(255, 215, 0, 0.15);
+}
+
+.province-panel-trips .trip-item:last-child::after {
+    display: none;
+}
+
+.province-panel-photos .photo-thumb {
+    opacity: 0;
+    animation: panelItemIn 0.4s ease-out forwards;
+}
+
+.province-panel-photos .photo-thumb:hover {
+    transform: scale(1.6);
+    z-index: 10;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 12px rgba(255, 215, 0, 0.2);
+    border-color: rgba(255, 215, 0, 0.5);
 }
 
 .china-back-btn {
@@ -819,8 +983,8 @@ body {
 }
 
 @keyframes cityPopIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from { opacity: 0; transform: scale(0); }
+    to { opacity: 1; transform: scale(1); }
 }
 
 @keyframes pulseGlow {
@@ -865,6 +1029,7 @@ body {
     stroke-linecap: round;
     stroke-linejoin: round;
     opacity: 0;
+    transition: stroke-width 0.3s, filter 0.3s;
 }
 
 .route-lines-group path.route-dash {
@@ -1010,11 +1175,10 @@ body {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 8px 12px;
+    padding: 8px 12px 8px 24px;
     margin-bottom: 6px;
     background: rgba(255, 255, 255, 0.03);
     border-radius: 10px;
-    border-left: 2px solid rgba(255, 215, 0, 0.4);
     transition: background 0.2s;
 }
 
@@ -1056,13 +1220,7 @@ body {
     overflow: hidden;
     cursor: pointer;
     border: 1px solid rgba(255, 255, 255, 0.06);
-    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
-}
-
-.province-panel-photos .photo-thumb:hover {
-    transform: scale(1.05);
-    border-color: rgba(255, 215, 0, 0.4);
-    box-shadow: 0 4px 16px rgba(255, 215, 0, 0.15);
+    transition: transform 0.3s, border-color 0.3s, box-shadow 0.3s, z-index 0s;
 }
 
 .province-panel-photos .photo-thumb img {
