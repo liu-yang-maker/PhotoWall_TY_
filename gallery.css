@@ -542,6 +542,536 @@ body {
     color: #fff;
 }
 
+/* ===== China Map Overlay ===== */
+.china-map-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 14;
+    opacity: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse at 50% 40%, #1a1a2e 0%, #0f0f1a 100%);
+    transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+}
+
+.china-map-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.china-map-header {
+    position: absolute;
+    top: 80px;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 24px;
+    z-index: 10;
+    animation: fadeSlideDown 0.8s 0.3s both;
+}
+
+.china-map-title {
+    font-family: 'Ma Shan Zheng', cursive;
+    font-size: clamp(22px, 3vw, 36px);
+    color: rgba(255, 235, 180, 0.9);
+    text-shadow: 0 0 20px rgba(255, 200, 100, 0.3);
+    margin: 0;
+    font-weight: 400;
+    letter-spacing: 2px;
+}
+
+.china-stats {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    color: rgba(255, 200, 160, 0.8);
+    background: rgba(255, 140, 160, 0.12);
+    border: 1px solid rgba(255, 140, 160, 0.25);
+    padding: 6px 16px;
+    border-radius: 20px;
+    backdrop-filter: blur(8px);
+}
+
+.china-stats span {
+    font-weight: 700;
+    color: rgba(255, 160, 180, 1);
+}
+
+#chinaMapSvg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+}
+
+.china-map-overlay.active #chinaMapSvg {
+    pointer-events: auto;
+}
+
+.provinces-group {
+    transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.province {
+    stroke: rgba(255, 255, 255, 0.18);
+    stroke-width: 0.8;
+    cursor: pointer;
+    transition: fill 0.3s, stroke 0.3s, stroke-width 0.3s, opacity 0.4s, filter 0.3s;
+    opacity: 0;
+    animation: provinceFadeIn 0.6s forwards;
+}
+
+.province-visited {
+    fill: rgba(255, 120, 150, 0.45);
+    stroke: rgba(255, 200, 180, 0.6);
+    stroke-width: 1;
+}
+
+.province-unvisited {
+    fill: rgba(45, 55, 80, 0.6);
+    stroke: rgba(140, 160, 200, 0.3);
+    stroke-width: 0.5;
+}
+
+.province-visited:hover {
+    fill: rgba(255, 140, 170, 0.65);
+    stroke: rgba(255, 220, 200, 0.9);
+    stroke-width: 2;
+    filter: drop-shadow(0 0 12px rgba(255, 140, 160, 0.5));
+}
+
+.province-unvisited:hover {
+    fill: rgba(70, 90, 130, 0.5);
+    stroke: rgba(200, 210, 240, 0.5);
+    stroke-width: 1.2;
+}
+
+.province.dimmed {
+    opacity: 0.2;
+    pointer-events: none;
+}
+
+.province.zoomed {
+    fill: rgba(255, 150, 170, 0.25);
+    stroke: rgba(255, 200, 180, 0.6);
+    stroke-width: 1.5;
+}
+
+.city-marker {
+    cursor: pointer;
+    opacity: 0;
+    animation: cityPopIn 0.4s forwards;
+}
+
+.city-marker circle.marker-dot {
+    transition: r 0.3s, fill 0.3s;
+}
+
+.city-marker-travel circle.marker-dot {
+    fill: #ffd700;
+    animation: pulseGlow 2.5s ease-in-out infinite;
+}
+
+.city-marker-travel circle.marker-glow {
+    fill: rgba(255, 215, 0, 0.15);
+    animation: pulseGlowOuter 2.5s ease-in-out infinite;
+}
+
+.city-marker-other circle.marker-dot {
+    fill: rgba(160, 180, 200, 0.5);
+}
+
+.city-marker text {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    fill: rgba(255, 235, 180, 0.85);
+    pointer-events: none;
+}
+
+.city-marker-other text {
+    fill: rgba(160, 185, 210, 0.5);
+    font-size: 9px;
+}
+
+.city-marker-travel:hover circle.marker-dot {
+    fill: #fff0a0;
+}
+
+.city-marker-travel:hover text {
+    fill: rgba(255, 255, 200, 1);
+}
+
+.china-tooltip {
+    position: fixed;
+    z-index: 100;
+    background: rgba(15, 10, 30, 0.9);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 200, 180, 0.25);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    color: rgba(255, 240, 220, 0.9);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity 0.2s, transform 0.2s;
+    white-space: nowrap;
+}
+
+.china-tooltip.visible {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.china-tooltip .tooltip-name {
+    font-weight: 600;
+}
+
+.china-tooltip .tooltip-sub {
+    font-size: 11px;
+    color: rgba(200, 200, 220, 0.6);
+    margin-top: 2px;
+}
+
+.china-back-btn {
+    position: absolute;
+    bottom: 40px;
+    left: 40px;
+    z-index: 20;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.7);
+    background: rgba(30, 25, 50, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 20px;
+    padding: 10px 20px;
+    cursor: pointer;
+    backdrop-filter: blur(8px);
+    transition: all 0.3s;
+    animation: fadeSlideUp 0.6s 0.8s both;
+}
+
+.china-back-btn:hover {
+    color: #fff;
+    background: rgba(50, 45, 80, 0.9);
+    border-color: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.china-back-province {
+    left: 170px;
+    display: none;
+}
+
+.china-back-province.visible {
+    display: block;
+    animation: fadeSlideUp 0.4s both;
+}
+
+.china-map-loading {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    z-index: 5;
+}
+
+.china-map-loading p {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 13px;
+    color: rgba(255, 235, 180, 0.6);
+    margin: 0;
+}
+
+.china-map-loading.hidden {
+    display: none;
+}
+
+.loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 2px solid rgba(255, 200, 160, 0.2);
+    border-top-color: rgba(255, 200, 160, 0.8);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes provinceFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes cityPopIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes pulseGlow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+@keyframes pulseGlowOuter {
+    0%, 100% { r: 12; opacity: 0.15; }
+    50% { r: 16; opacity: 0.08; }
+}
+
+@keyframes fadeSlideDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== China Map Particles ===== */
+.china-map-particles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* ===== Travel Route Lines ===== */
+.route-lines-group {
+    transition: transform 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.route-lines-group path.route-segment {
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0;
+    animation: routeFadeIn 1s forwards;
+}
+
+.route-lines-group path.route-dash {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.6);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-dasharray: 6 8;
+    animation: routeDashFlow 2s linear infinite;
+    opacity: 0.7;
+}
+
+.route-travel-dot {
+    fill: #ffd700;
+    filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.8));
+}
+
+@keyframes routeFadeIn {
+    from { opacity: 0; stroke-dashoffset: 200; }
+    to { opacity: 0.85; stroke-dashoffset: 0; }
+}
+
+@keyframes routeDashFlow {
+    to { stroke-dashoffset: -28; }
+}
+
+/* ===== Province Detail Panel ===== */
+.province-detail-panel {
+    position: absolute;
+    top: 50%;
+    right: -400px;
+    transform: translateY(-50%);
+    width: 340px;
+    max-height: 72vh;
+    overflow-y: auto;
+    z-index: 30;
+    background: rgba(12, 8, 28, 0.92);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid rgba(255, 215, 0, 0.15);
+    border-radius: 20px;
+    padding: 28px 24px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    transition: right 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.5s;
+    opacity: 0;
+}
+
+.province-detail-panel.visible {
+    right: 40px;
+    opacity: 1;
+}
+
+.province-detail-panel::-webkit-scrollbar {
+    width: 4px;
+}
+
+.province-detail-panel::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.province-detail-panel::-webkit-scrollbar-thumb {
+    background: rgba(255, 215, 0, 0.2);
+    border-radius: 4px;
+}
+
+.province-panel-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 18px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.province-panel-close:hover {
+    background: rgba(255, 100, 130, 0.2);
+    color: #fff;
+}
+
+.province-panel-name {
+    font-family: 'Ma Shan Zheng', cursive;
+    font-size: 34px;
+    background: linear-gradient(135deg, #ffd700 0%, #ff6b9d 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0 0 4px 0;
+    line-height: 1.2;
+}
+
+.province-panel-sub {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    color: rgba(200, 200, 220, 0.6);
+    margin: 0 0 16px 0;
+}
+
+.province-panel-stats {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.province-panel-stats .stat-badge {
+    background: rgba(255, 215, 0, 0.08);
+    border: 1px solid rgba(255, 215, 0, 0.2);
+    border-radius: 12px;
+    padding: 8px 14px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    color: rgba(255, 235, 180, 0.9);
+}
+
+.province-panel-stats .stat-badge strong {
+    color: #ffd700;
+    font-size: 16px;
+    margin-right: 4px;
+}
+
+.province-panel-trips {
+    margin-bottom: 20px;
+}
+
+.province-panel-trips .trips-title {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: rgba(255, 200, 160, 0.5);
+    margin-bottom: 10px;
+}
+
+.province-panel-trips .trip-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 10px;
+    border-left: 2px solid rgba(255, 215, 0, 0.4);
+    transition: background 0.2s;
+}
+
+.province-panel-trips .trip-item:hover {
+    background: rgba(255, 215, 0, 0.06);
+}
+
+.province-panel-trips .trip-date {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    color: rgba(255, 215, 0, 0.8);
+    white-space: nowrap;
+}
+
+.province-panel-trips .trip-title {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    color: rgba(255, 240, 220, 0.85);
+}
+
+.province-panel-photos .photos-title {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: rgba(255, 200, 160, 0.5);
+    margin-bottom: 10px;
+}
+
+.province-panel-photos .photo-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.province-panel-photos .photo-thumb {
+    aspect-ratio: 1;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.province-panel-photos .photo-thumb:hover {
+    transform: scale(1.05);
+    border-color: rgba(255, 215, 0, 0.4);
+    box-shadow: 0 4px 16px rgba(255, 215, 0, 0.15);
+}
+
+.province-panel-photos .photo-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 768px) {
     #galleryHeader {
@@ -607,5 +1137,52 @@ body {
 
     .mode-name {
         display: none;
+    }
+
+    .china-map-header {
+        top: 60px;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .china-map-title {
+        font-size: 20px;
+    }
+
+    .china-stats {
+        font-size: 11px;
+    }
+
+    .china-back-btn {
+        bottom: 80px;
+        left: 20px;
+        font-size: 12px;
+        padding: 8px 16px;
+    }
+
+    .china-back-province {
+        left: 140px;
+    }
+
+    .china-tooltip {
+        font-size: 12px;
+    }
+
+    .province-detail-panel {
+        width: 280px;
+        padding: 20px 16px;
+        max-height: 60vh;
+    }
+
+    .province-detail-panel.visible {
+        right: 16px;
+    }
+
+    .province-panel-name {
+        font-size: 26px;
+    }
+
+    .province-panel-photos .photo-grid {
+        grid-template-columns: repeat(2, 1fr);
     }
 }

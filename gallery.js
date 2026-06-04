@@ -121,6 +121,11 @@
     let chinaMapTransition = 0; // 0-1 for crossfade
     let chinaClickCount = 0;
     let chinaClickTimer = null;
+    let chinaMapInitialized = false;
+    let chinaProvinceFeatures = null;
+    let chinaProjection = null;
+    let chinaPathGen = null;
+    let currentProvinceZoom = null;
 
     // ===== INIT =====
     async function init() {
@@ -630,9 +635,12 @@
         gc.classList.remove('active');
         const popup = document.getElementById('globePopup');
         popup.classList.remove('visible');
+        const chinaOverlay = document.getElementById('chinaMapOverlay');
+        if (chinaOverlay) chinaOverlay.classList.remove('active');
         photoElements.forEach(el => { el.style.pointerEvents = ''; });
         chinaMapMode = false;
         chinaMapTransition = 0;
+        if (currentProvinceZoom) zoomOutToFull();
     }
 
     function latLngToScreen(lat, lng, rotX, rotY, radius, cx, cy) {
@@ -730,16 +738,10 @@
             gctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
             gctx.clearRect(0, 0, w, h);
 
-            // Handle China map mode with crossfade
+            // In China map mode, SVG overlay handles display - skip globe rendering
             if (chinaMapMode) {
-                if (chinaMapTransition < 1) chinaMapTransition = Math.min(1, chinaMapTransition + 0.04);
-                gctx.globalAlpha = chinaMapTransition;
-                renderChinaMap(gctx, w, h);
-                gctx.globalAlpha = 1;
                 globeAnimId = requestAnimationFrame(tick);
                 return;
-            } else if (chinaMapTransition > 0) {
-                chinaMapTransition = Math.max(0, chinaMapTransition - 0.04);
             }
 
             const cx = w / 2;
@@ -1070,183 +1072,787 @@
         globeAnimId = requestAnimationFrame(tick);
     }
 
-    // ===== CHINA FLAT MAP EASTER EGG =====
-    function chinaProject(lat, lng, w, h) {
-        const padding = 100;
-        const mapW = w - padding * 2;
-        const mapH = h - padding * 2;
-        const x = padding + ((lng - 73) / (135 - 73)) * mapW;
-        const y = padding + ((54 - lat) / (54 - 18)) * mapH;
-        return { x, y };
+    // ===== CHINA SVG MAP =====
+    function createSVGEl(tag, attrs) {
+        const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+        if (attrs) Object.entries(attrs).forEach(([k, v]) => el.setAttribute(k, v));
+        return el;
+    }
+
+    function getVisitedProvinces() {
+        const visited = new Set();
+        if (!_globeTC) return visited;
+        Object.keys(_globeTC).forEach(cityKey => {
+            const adcode = window.CITY_TO_PROVINCE && window.CITY_TO_PROVINCE[cityKey];
+            if (adcode) visited.add(adcode);
+        });
+        return visited;
     }
 
     function enterChinaMap() {
         chinaMapMode = true;
-        chinaMapTransition = 0;
+        const gc = document.getElementById('globeCanvas');
+        gc.classList.remove('active');
+        const overlay = document.getElementById('chinaMapOverlay');
+        overlay.classList.add('active');
+        const popup = document.getElementById('globePopup');
+        popup.classList.remove('visible');
+        if (!chinaMapInitialized) {
+            initChinaMapSVG();
+        } else {
+            document.getElementById('chinaMapLoading').classList.add('hidden');
+        }
+        initChinaMapParticles();
     }
 
     function exitChinaMap() {
         chinaMapMode = false;
-        chinaMapTransition = 1;
+        const overlay = document.getElementById('chinaMapOverlay');
+        overlay.classList.remove('active');
+        const gc = document.getElementById('globeCanvas');
+        gc.classList.add('active');
         const popup = document.getElementById('globePopup');
         popup.classList.remove('visible');
+        if (currentProvinceZoom) zoomOutToFull();
+        hideProvinceDetailPanel();
+        pauseChinaParticles();
     }
 
-    function renderChinaMap(gctx, w, h) {
-        // Background
-        const bgGrad = gctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, Math.max(w,h)*0.6);
-        bgGrad.addColorStop(0, '#1a2a4a');
-        bgGrad.addColorStop(1, '#0a0a1a');
-        gctx.fillStyle = bgGrad;
-        gctx.fillRect(0, 0, w, h);
+    // ===== CHINA MAP PARTICLES =====
+    let chinaParticleAnimId = null;
+    let chinaParticlesInited = false;
+    let chinaParticles = [];
+    let chinaShootingStars = [];
+    let lastShootingStarTime = 0;
 
-        // Draw China outline from GeoJSON
-        if (_geoFeatures) {
-            _geoFeatures.forEach(feature => {
-                const id = feature.id || (feature.properties && feature.properties.iso_n3);
-                if (id !== '156' && id !== '158') return; // China + Taiwan
-                const geom = feature.geometry;
-                if (!geom) return;
-                let polygons = geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates;
+    function initChinaMapParticles() {
+        if (chinaParticlesInited) { resumeChinaParticles(); return; }
+        chinaParticlesInited = true;
+        const canvas = document.getElementById('chinaMapParticleCanvas');
+        const ctx = canvas.getContext('2d');
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        canvas.width = w * devicePixelRatio;
+        canvas.height = h * devicePixelRatio;
+        canvas.style.width = w + 'px';
+        canvas.style.height = h + 'px';
+        ctx.scale(devicePixelRatio, devicePixelRatio);
 
-                polygons.forEach(polygon => {
-                    const ring = polygon[0];
-                    if (!ring || ring.length < 3) return;
-                    gctx.beginPath();
-                    ring.forEach((coord, i) => {
-                        const p = chinaProject(coord[1], coord[0], w, h);
-                        if (i === 0) gctx.moveTo(p.x, p.y);
-                        else gctx.lineTo(p.x, p.y);
-                    });
-                    gctx.closePath();
+        const colors = [
+            'rgba(255, 215, 0, ',
+            'rgba(255, 235, 210, ',
+            'rgba(255, 200, 160, ',
+            'rgba(255, 180, 200, '
+        ];
 
-                    // Fill with warm gradient
-                    const grad = gctx.createLinearGradient(w*0.3, h*0.2, w*0.7, h*0.8);
-                    grad.addColorStop(0, 'rgba(180, 70, 50, 0.25)');
-                    grad.addColorStop(0.5, 'rgba(160, 55, 45, 0.20)');
-                    grad.addColorStop(1, 'rgba(140, 40, 35, 0.15)');
-                    gctx.fillStyle = grad;
-                    gctx.fill();
-                    gctx.strokeStyle = 'rgba(255, 180, 100, 0.6)';
-                    gctx.lineWidth = 1.5;
-                    gctx.shadowColor = 'rgba(255, 180, 100, 0.3)';
-                    gctx.shadowBlur = 4;
-                    gctx.stroke();
-                    gctx.shadowBlur = 0;
-                });
-            });
-        } else if (_globeCB.length > 0) {
-            // Fallback: use hand-crafted China data
-            _globeCB.forEach(country => {
-                if (country.color !== 'highlight') return;
-                if (!country.points) return;
-                gctx.beginPath();
-                country.points.forEach((pt, i) => {
-                    const p = chinaProject(pt[0], pt[1], w, h);
-                    if (i === 0) gctx.moveTo(p.x, p.y);
-                    else gctx.lineTo(p.x, p.y);
-                });
-                gctx.closePath();
-                gctx.fillStyle = 'rgba(180, 70, 50, 0.22)';
-                gctx.fill();
-                gctx.strokeStyle = 'rgba(255, 180, 100, 0.6)';
-                gctx.lineWidth = 1.5;
-                gctx.stroke();
+        for (let i = 0; i < 55; i++) {
+            chinaParticles.push({
+                x: Math.random() * w,
+                y: Math.random() * h,
+                vx: (Math.random() - 0.5) * 0.3,
+                vy: -Math.random() * 0.2 - 0.05,
+                size: Math.random() * 2 + 1,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                alpha: Math.random() * 0.4 + 0.1,
+                alphaDir: Math.random() > 0.5 ? 1 : -1,
+                phase: Math.random() * Math.PI * 2
             });
         }
 
-        // Draw CN cities (non-travel)
-        const cnCities = _globeWC.filter(c => c.country === 'CN');
-        const fontSize = Math.max(9, Math.min(w, h) * 0.012);
-        cnCities.forEach(city => {
-            const isTravel = _globeTC && _globeTC[city.nameEn];
-            if (isTravel) return;
-            const p = chinaProject(city.lat, city.lng, w, h);
-            if (p.x < 50 || p.x > w-50 || p.y < 50 || p.y > h-50) return;
-            gctx.beginPath();
-            gctx.arc(p.x, p.y, 2.5, 0, Math.PI * 2);
-            gctx.fillStyle = 'rgba(160, 180, 200, 0.55)';
-            gctx.fill();
-            gctx.font = `${fontSize}px Montserrat, sans-serif`;
-            gctx.fillStyle = 'rgba(160, 185, 210, 0.5)';
-            gctx.fillText(city.name, p.x + 5, p.y + 3);
+        lastShootingStarTime = Date.now();
+
+        function tick() {
+            ctx.clearRect(0, 0, w, h);
+            const now = Date.now();
+
+            chinaParticles.forEach(p => {
+                p.x += p.vx + Math.sin(p.phase) * 0.1;
+                p.y += p.vy;
+                p.phase += 0.01;
+                p.alpha += p.alphaDir * 0.003;
+                if (p.alpha > 0.5) { p.alpha = 0.5; p.alphaDir = -1; }
+                if (p.alpha < 0.08) { p.alpha = 0.08; p.alphaDir = 1; }
+
+                if (p.y < -10) p.y = h + 10;
+                if (p.x < -10) p.x = w + 10;
+                if (p.x > w + 10) p.x = -10;
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fillStyle = p.color + p.alpha + ')';
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size * 2.5, 0, Math.PI * 2);
+                ctx.fillStyle = p.color + (p.alpha * 0.2) + ')';
+                ctx.fill();
+            });
+
+            if (now - lastShootingStarTime > 8000 + Math.random() * 6000) {
+                chinaShootingStars.push({
+                    x: Math.random() * w * 0.8,
+                    y: Math.random() * h * 0.3,
+                    vx: 3 + Math.random() * 2,
+                    vy: 1.5 + Math.random(),
+                    life: 60,
+                    maxLife: 60
+                });
+                lastShootingStarTime = now;
+            }
+
+            chinaShootingStars = chinaShootingStars.filter(s => {
+                s.x += s.vx;
+                s.y += s.vy;
+                s.life--;
+                const progress = s.life / s.maxLife;
+                const tailLen = 30 * progress;
+                ctx.beginPath();
+                ctx.moveTo(s.x, s.y);
+                ctx.lineTo(s.x - s.vx * tailLen / s.vx, s.y - s.vy * tailLen / s.vy);
+                const grad = ctx.createLinearGradient(s.x, s.y, s.x - s.vx * 5, s.y - s.vy * 5);
+                grad.addColorStop(0, `rgba(255, 235, 180, ${progress * 0.8})`);
+                grad.addColorStop(1, 'rgba(255, 235, 180, 0)');
+                ctx.strokeStyle = grad;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                return s.life > 0;
+            });
+
+            chinaParticleAnimId = requestAnimationFrame(tick);
+        }
+        chinaParticleAnimId = requestAnimationFrame(tick);
+    }
+
+    function resumeChinaParticles() {
+        if (chinaParticleAnimId) return;
+        const canvas = document.getElementById('chinaMapParticleCanvas');
+        const ctx = canvas.getContext('2d');
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        canvas.width = w * devicePixelRatio;
+        canvas.height = h * devicePixelRatio;
+        canvas.style.width = w + 'px';
+        canvas.style.height = h + 'px';
+        ctx.scale(devicePixelRatio, devicePixelRatio);
+
+        function tick() {
+            ctx.clearRect(0, 0, w, h);
+            const now = Date.now();
+
+            chinaParticles.forEach(p => {
+                p.x += p.vx + Math.sin(p.phase) * 0.1;
+                p.y += p.vy;
+                p.phase += 0.01;
+                p.alpha += p.alphaDir * 0.003;
+                if (p.alpha > 0.5) { p.alpha = 0.5; p.alphaDir = -1; }
+                if (p.alpha < 0.08) { p.alpha = 0.08; p.alphaDir = 1; }
+
+                if (p.y < -10) p.y = h + 10;
+                if (p.x < -10) p.x = w + 10;
+                if (p.x > w + 10) p.x = -10;
+
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fillStyle = p.color + p.alpha + ')';
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size * 2.5, 0, Math.PI * 2);
+                ctx.fillStyle = p.color + (p.alpha * 0.2) + ')';
+                ctx.fill();
+            });
+
+            if (now - lastShootingStarTime > 8000 + Math.random() * 6000) {
+                chinaShootingStars.push({
+                    x: Math.random() * w * 0.8,
+                    y: Math.random() * h * 0.3,
+                    vx: 3 + Math.random() * 2,
+                    vy: 1.5 + Math.random(),
+                    life: 60,
+                    maxLife: 60
+                });
+                lastShootingStarTime = now;
+            }
+
+            chinaShootingStars = chinaShootingStars.filter(s => {
+                s.x += s.vx;
+                s.y += s.vy;
+                s.life--;
+                const progress = s.life / s.maxLife;
+                const tailLen = 30 * progress;
+                ctx.beginPath();
+                ctx.moveTo(s.x, s.y);
+                ctx.lineTo(s.x - s.vx * tailLen / s.vx, s.y - s.vy * tailLen / s.vy);
+                const grad = ctx.createLinearGradient(s.x, s.y, s.x - s.vx * 5, s.y - s.vy * 5);
+                grad.addColorStop(0, `rgba(255, 235, 180, ${progress * 0.8})`);
+                grad.addColorStop(1, 'rgba(255, 235, 180, 0)');
+                ctx.strokeStyle = grad;
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                return s.life > 0;
+            });
+
+            chinaParticleAnimId = requestAnimationFrame(tick);
+        }
+        chinaParticleAnimId = requestAnimationFrame(tick);
+    }
+
+    function pauseChinaParticles() {
+        if (chinaParticleAnimId) { cancelAnimationFrame(chinaParticleAnimId); chinaParticleAnimId = null; }
+    }
+
+    // ===== PROVINCE DETAIL PANEL =====
+    function showProvinceDetailPanel(adcode) {
+        const panel = document.getElementById('provinceDetailPanel');
+        const provinceInfo = window.PROVINCE_CITY_MAP && window.PROVINCE_CITY_MAP[adcode];
+        if (!provinceInfo) return;
+
+        const provinceCities = provinceInfo.cities || [];
+        let allEvents = [];
+        provinceCities.forEach(cityName => {
+            if (_globeTC && _globeTC[cityName]) {
+                _globeTC[cityName].events.forEach(ev => {
+                    allEvents.push({ city: cityName, dateKey: ev.dateKey, title: ev.title });
+                });
+            }
         });
+        allEvents.sort((a, b) => a.dateKey.localeCompare(b.dateKey));
 
-        // Draw travel cities (gold pulsing)
-        if (_globeTC) {
-            const pulse = 1 + 0.25 * Math.sin(globeTime * 0.05);
-            Object.keys(_globeTC).forEach(key => {
-                const city = _globeWC.find(c => c.nameEn === key);
-                if (!city || city.country !== 'CN') return;
-                const p = chinaProject(city.lat, city.lng, w, h);
-                const dotSize = 5 * pulse;
+        const visitedCities = provinceCities.filter(c => _globeTC && _globeTC[c]);
 
-                // Glow
-                const areaGrad = gctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, dotSize * 4);
-                areaGrad.addColorStop(0, 'rgba(255, 215, 0, 0.2)');
-                areaGrad.addColorStop(0.5, 'rgba(255, 200, 50, 0.06)');
-                areaGrad.addColorStop(1, 'rgba(255, 200, 50, 0)');
-                gctx.fillStyle = areaGrad;
-                gctx.beginPath();
-                gctx.arc(p.x, p.y, dotSize * 4, 0, Math.PI * 2);
-                gctx.fill();
+        document.getElementById('provincePanelName').textContent = provinceInfo.name;
+        document.getElementById('provincePanelSub').textContent = provinceInfo.nameEn;
 
-                // Dot
-                gctx.beginPath();
-                gctx.arc(p.x, p.y, dotSize, 0, Math.PI * 2);
-                const dotGrad = gctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, dotSize);
-                dotGrad.addColorStop(0, 'rgba(255, 240, 180, 1)');
-                dotGrad.addColorStop(1, 'rgba(255, 180, 0, 0.8)');
-                gctx.fillStyle = dotGrad;
-                gctx.fill();
-                gctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
-                gctx.lineWidth = 1.2;
-                gctx.stroke();
+        document.getElementById('provincePanelStats').innerHTML =
+            `<div class="stat-badge"><strong>${visitedCities.length}</strong>城市</div>` +
+            `<div class="stat-badge"><strong>${allEvents.length}</strong>次旅行</div>`;
 
-                // Label
-                const labelSize = Math.max(11, Math.min(w, h) * 0.015);
-                gctx.font = `bold ${labelSize}px Montserrat, sans-serif`;
-                gctx.fillStyle = 'rgba(255, 235, 160, 0.95)';
-                gctx.fillText(city.name, p.x + dotSize + 5, p.y + 4);
+        let tripsHtml = '<div class="trips-title">旅行足迹</div>';
+        allEvents.forEach(ev => {
+            tripsHtml += `<div class="trip-item">
+                <span class="trip-date">${ev.dateKey}</span>
+                <span class="trip-title">${ev.title}</span>
+            </div>`;
+        });
+        document.getElementById('provincePanelTrips').innerHTML = tripsHtml;
 
-                // Event count
-                const evtCount = _globeTC[key].events.length;
-                if (evtCount > 1) {
-                    const badgeX = p.x + dotSize + 5 + gctx.measureText(city.name).width + 4;
-                    gctx.font = `${Math.max(9, labelSize - 2)}px Montserrat, sans-serif`;
-                    gctx.fillStyle = 'rgba(255, 180, 100, 0.7)';
-                    gctx.fillText(`(${evtCount})`, badgeX, p.y + 4);
+        const matchedPhotos = [];
+        allEvents.forEach(ev => {
+            imageList.forEach(img => {
+                if (img.startsWith(ev.dateKey) && matchedPhotos.length < 12) {
+                    matchedPhotos.push(img);
                 }
             });
+        });
+
+        let photosHtml = '';
+        if (matchedPhotos.length > 0) {
+            photosHtml = '<div class="photos-title">记忆碎片</div><div class="photo-grid">';
+            matchedPhotos.forEach(img => {
+                photosHtml += `<div class="photo-thumb" data-img="${img}"><img src="images/thumbs/${img}" alt="" loading="lazy" onerror="this.src='images/${img}'"></div>`;
+            });
+            photosHtml += '</div>';
+        }
+        document.getElementById('provincePanelPhotos').innerHTML = photosHtml;
+
+        panel.querySelectorAll('.photo-thumb').forEach(thumb => {
+            thumb.addEventListener('click', () => {
+                const imgName = thumb.dataset.img;
+                const popupEl = document.getElementById('galleryPopup');
+                const popupImg = document.getElementById('galleryPopupImg');
+                popupImg.src = `images/${imgName}`;
+                popupEl.classList.add('visible');
+            });
+        });
+
+        panel.classList.add('visible');
+    }
+
+    function hideProvinceDetailPanel() {
+        document.getElementById('provinceDetailPanel').classList.remove('visible');
+    }
+
+    // ===== TRAVEL ROUTE LINES =====
+    function buildChronologicalRoute() {
+        if (!_globeTC || !_globeWC) return [];
+        const cnCities = _globeWC.filter(c => c.country === 'CN');
+        let allStops = [];
+        Object.keys(_globeTC).forEach(cityName => {
+            const city = cnCities.find(c => c.nameEn === cityName);
+            if (!city) return;
+            _globeTC[cityName].events.forEach(ev => {
+                allStops.push({ cityName, lat: city.lat, lng: city.lng, dateKey: ev.dateKey });
+            });
+        });
+        allStops.sort((a, b) => a.dateKey.localeCompare(b.dateKey));
+        // Deduplicate consecutive same-city
+        const deduped = [];
+        allStops.forEach(s => {
+            if (deduped.length === 0 || deduped[deduped.length - 1].cityName !== s.cityName) {
+                deduped.push(s);
+            }
+        });
+        return deduped;
+    }
+
+    function renderRouteLines(routeGroup) {
+        const stops = buildChronologicalRoute();
+        if (stops.length < 2 || !chinaProjection) return;
+
+        const defs = createSVGEl('defs', {});
+        const grad = createSVGEl('linearGradient', { id: 'routeGradient', x1: '0%', y1: '0%', x2: '100%', y2: '0%' });
+        const stop1 = createSVGEl('stop', { offset: '0%', 'stop-color': '#ffd700', 'stop-opacity': '0.9' });
+        const stop2 = createSVGEl('stop', { offset: '100%', 'stop-color': '#ff6b9d', 'stop-opacity': '0.9' });
+        grad.appendChild(stop1);
+        grad.appendChild(stop2);
+        defs.appendChild(grad);
+        routeGroup.appendChild(defs);
+
+        const points = stops.map(s => chinaProjection([s.lng, s.lat])).filter(p => p);
+        if (points.length < 2) return;
+
+        // Build smooth path with quadratic curves
+        let pathD = `M ${points[0][0]},${points[0][1]}`;
+        for (let i = 1; i < points.length; i++) {
+            const prev = points[i - 1];
+            const curr = points[i];
+            const midX = (prev[0] + curr[0]) / 2;
+            const midY = (prev[1] + curr[1]) / 2;
+            const cpX = midX + (Math.random() - 0.5) * 20;
+            const cpY = midY - Math.abs(curr[1] - prev[1]) * 0.3 - 10;
+            pathD += ` Q ${cpX},${cpY} ${curr[0]},${curr[1]}`;
         }
 
-        // Title
-        gctx.font = `bold ${Math.max(14, w * 0.016)}px Montserrat, sans-serif`;
-        gctx.fillStyle = 'rgba(255, 235, 180, 0.8)';
-        gctx.fillText('我们的中国足迹', w / 2 - gctx.measureText('我们的中国足迹').width / 2, 60);
+        // Main gradient path
+        const mainPath = createSVGEl('path', {
+            d: pathD,
+            class: 'route-segment',
+            stroke: 'url(#routeGradient)'
+        });
+        routeGroup.appendChild(mainPath);
+        // Set dasharray to actual path length for draw-in animation
+        requestAnimationFrame(() => {
+            const len = mainPath.getTotalLength ? mainPath.getTotalLength() : 2000;
+            mainPath.style.strokeDasharray = len;
+            mainPath.style.strokeDashoffset = len;
+            mainPath.style.animation = `routeFadeIn 2.5s cubic-bezier(0.4, 0, 0.2, 1) forwards`;
+        });
 
-        // Back button
-        const btnX = 30, btnY = h - 60, btnW = 110, btnH = 36;
-        const r = 18;
-        gctx.fillStyle = 'rgba(30, 25, 50, 0.8)';
-        gctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
-        gctx.lineWidth = 1;
-        gctx.beginPath();
-        gctx.moveTo(btnX + r, btnY);
-        gctx.lineTo(btnX + btnW - r, btnY);
-        gctx.arcTo(btnX + btnW, btnY, btnX + btnW, btnY + r, r);
-        gctx.lineTo(btnX + btnW, btnY + btnH - r);
-        gctx.arcTo(btnX + btnW, btnY + btnH, btnX + btnW - r, btnY + btnH, r);
-        gctx.lineTo(btnX + r, btnY + btnH);
-        gctx.arcTo(btnX, btnY + btnH, btnX, btnY + btnH - r, r);
-        gctx.lineTo(btnX, btnY + r);
-        gctx.arcTo(btnX, btnY, btnX + r, btnY, r);
-        gctx.closePath();
-        gctx.fill();
-        gctx.stroke();
-        gctx.font = '13px Montserrat, sans-serif';
-        gctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-        gctx.fillText('← 返回地球', btnX + 16, btnY + 23);
+        // Animated dash overlay
+        const dashPath = createSVGEl('path', {
+            d: pathD,
+            class: 'route-dash'
+        });
+        routeGroup.appendChild(dashPath);
+
+        // Traveling dot with animateMotion
+        const dot = createSVGEl('circle', { r: '3.5', class: 'route-travel-dot' });
+        const motion = createSVGEl('animateMotion', {
+            dur: `${points.length * 3}s`,
+            repeatCount: 'indefinite',
+            path: pathD.replace(`M ${points[0][0]},${points[0][1]}`, `M 0,0`)
+        });
+        // Use the actual path for animateMotion
+        const motionPath = createSVGEl('animateMotion', {
+            dur: `${Math.max(points.length * 2.5, 8)}s`,
+            repeatCount: 'indefinite'
+        });
+        const mpath = createSVGEl('mpath', {});
+        mainPath.setAttribute('id', 'routeMainPath');
+        mpath.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '#routeMainPath');
+        motionPath.appendChild(mpath);
+        dot.appendChild(motionPath);
+        routeGroup.appendChild(dot);
+    }
+
+    async function initChinaMapSVG() {
+        const loading = document.getElementById('chinaMapLoading');
+        const svg = document.getElementById('chinaMapSvg');
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        console.log('[ChinaMap] viewport:', w, 'x', h);
+
+        try {
+            if (typeof d3 === 'undefined' || !d3.geoMercator) {
+                throw new Error('d3-geo not loaded');
+            }
+            const res = await fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json');
+            const geojson = await res.json();
+            // Filter out nine-dash line (100000_JD) which stretches bounds
+            chinaProvinceFeatures = geojson.features.filter(f => {
+                const adcode = String(f.properties.adcode || '');
+                return !adcode.includes('_') && adcode !== '100000';
+            });
+
+            // Custom projection: simple Mercator mapped to fill the screen
+            const lngMin = 73, lngMax = 135, latMin = 18, latMax = 54;
+            const mx = w * 0.05, mt = h * 0.08, mb = h * 0.05;
+            const drawW = w - mx * 2;
+            const drawH = h - mt - mb;
+            function mercY(lat) {
+                return Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI / 180) / 2));
+            }
+            const yMin = mercY(latMin), yMax = mercY(latMax);
+            const geoW = (lngMax - lngMin) * Math.PI / 180;
+            const geoH = yMax - yMin;
+            const sc = Math.min(drawW / geoW, drawH / geoH);
+            const realW = geoW * sc, realH = geoH * sc;
+            const ox = mx + (drawW - realW) / 2;
+            const oy = mt + (drawH - realH) / 2;
+
+            chinaProjection = function(coords) {
+                const x = ox + ((coords[0] - lngMin) * Math.PI / 180) * sc;
+                const y = oy + (yMax - mercY(coords[1])) * sc;
+                return [x, y];
+            };
+            chinaProjection.stream = function(s) {
+                return {
+                    point: function(lng, lat) { const p = chinaProjection([lng, lat]); s.point(p[0], p[1]); },
+                    lineStart: function() { s.lineStart(); },
+                    lineEnd: function() { s.lineEnd(); },
+                    polygonStart: function() { s.polygonStart(); },
+                    polygonEnd: function() { s.polygonEnd(); },
+                    sphere: function() {}
+                };
+            };
+            chinaPathGen = d3.geoPath().projection(chinaProjection);
+
+            console.log('[ChinaMap] viewport:', w, 'x', h, ', scale:', sc, ', offset:', ox, oy);
+            console.log('[ChinaMap] Beijing at:', chinaProjection([116.4, 39.9]));
+
+            const visitedProvinces = getVisitedProvinces();
+
+            // Provinces group
+            const g = createSVGEl('g', { class: 'provinces-group' });
+            g.id = 'provincesGroup';
+
+            chinaProvinceFeatures.forEach((feature, i) => {
+                const adcode = String(feature.properties.adcode);
+                const isVisited = visitedProvinces.has(adcode);
+                const pathD = chinaPathGen(feature);
+                if (!pathD) return;
+
+                const path = createSVGEl('path', {
+                    d: pathD,
+                    class: `province ${isVisited ? 'province-visited' : 'province-unvisited'}`,
+                    'data-adcode': adcode,
+                    'data-name': feature.properties.name
+                });
+                path.style.animationDelay = `${i * 25}ms`;
+
+                path.addEventListener('mouseenter', (e) => onProvinceHover(e, feature));
+                path.addEventListener('mousemove', (e) => moveTooltip(e));
+                path.addEventListener('mouseleave', onProvinceLeave);
+                path.addEventListener('click', (e) => onProvinceClick(e, feature, isVisited));
+                g.appendChild(path);
+            });
+            svg.appendChild(g);
+
+            // Route lines group (between provinces and city markers)
+            const routeGroup = createSVGEl('g', { class: 'route-lines-group' });
+            routeGroup.id = 'routeLinesGroup';
+            renderRouteLines(routeGroup);
+            svg.appendChild(routeGroup);
+
+            // City markers group
+            const cityGroup = createSVGEl('g', { class: 'city-markers-group' });
+            cityGroup.id = 'cityMarkersGroup';
+            renderCityMarkersSVG(cityGroup, visitedProvinces);
+            svg.appendChild(cityGroup);
+
+            // Update stats
+            document.getElementById('visitedCount').textContent = visitedProvinces.size;
+
+            // Bind back buttons
+            document.getElementById('chinaBackBtn').addEventListener('click', exitChinaMap);
+            document.getElementById('chinaBackProvinceBtn').addEventListener('click', zoomOutToFull);
+            document.getElementById('provincePanelClose').addEventListener('click', hideProvinceDetailPanel);
+
+            // Click on empty area dismisses popup
+            svg.addEventListener('click', (e) => {
+                if (!e.target.closest('.city-marker')) {
+                    document.getElementById('globePopup').classList.remove('visible');
+                }
+            });
+
+            loading.classList.add('hidden');
+            chinaMapInitialized = true;
+        } catch (e) {
+            console.error('Failed to load China province GeoJSON', e);
+            loading.innerHTML = '<p style="color:rgba(255,150,150,0.8)">地图加载失败，请刷新重试</p>';
+        }
+    }
+
+    function renderCityMarkersSVG(group, visitedProvinces) {
+        if (!_globeWC) return;
+        const cnCities = _globeWC.filter(c => c.country === 'CN');
+
+        cnCities.forEach((city, i) => {
+            const isTravel = _globeTC && _globeTC[city.nameEn];
+            const projected = chinaProjection([city.lng, city.lat]);
+            if (!projected) return;
+            const [cx, cy] = projected;
+
+            const g = createSVGEl('g', {
+                class: `city-marker ${isTravel ? 'city-marker-travel' : 'city-marker-other'}`,
+                'data-city': city.nameEn
+            });
+            g.style.animationDelay = `${800 + i * 40}ms`;
+
+            if (isTravel) {
+                const glow = createSVGEl('circle', {
+                    cx, cy, r: '12',
+                    class: 'marker-glow'
+                });
+                g.appendChild(glow);
+            }
+
+            const dot = createSVGEl('circle', {
+                cx, cy,
+                r: isTravel ? '5' : '2.5',
+                class: 'marker-dot'
+            });
+            g.appendChild(dot);
+
+            const label = createSVGEl('text', {
+                x: cx + (isTravel ? 10 : 6),
+                y: cy + 4
+            });
+            label.textContent = city.name;
+            if (isTravel) {
+                const evtCount = _globeTC[city.nameEn].events.length;
+                if (evtCount > 1) label.textContent += ` (${evtCount})`;
+            }
+            g.appendChild(label);
+
+            if (isTravel) {
+                g.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showCityPopup(city, e);
+                });
+            }
+
+            group.appendChild(g);
+        });
+    }
+
+    function showCityPopup(city, e) {
+        const popup = document.getElementById('globePopup');
+        const data = _globeTC[city.nameEn];
+        if (!data) return;
+
+        let html = `<span class="popup-close">&times;</span>`;
+        html += `<div class="popup-city">${city.name}</div>`;
+        data.events.forEach(ev => {
+            html += `<div class="popup-event">`;
+            html += `<span class="event-date">${ev.dateKey}</span>`;
+            html += `<span class="event-title">${ev.title}</span>`;
+            html += `<a class="event-link" href="index.html#gallery" data-date="${ev.dateKey}">照片</a>`;
+            html += `</div>`;
+        });
+        popup.innerHTML = html;
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        popup.style.left = Math.min(e.clientX + 10, w - 340) + 'px';
+        popup.style.top = Math.min(e.clientY - 20, h - 300) + 'px';
+        popup.classList.add('visible');
+        popup.querySelector('.popup-close').addEventListener('click', () => {
+            popup.classList.remove('visible');
+        });
+    }
+
+    function onProvinceHover(e, feature) {
+        const tooltip = document.getElementById('chinaTooltip');
+        const name = feature.properties.name;
+        const adcode = String(feature.properties.adcode);
+        const provinceInfo = window.PROVINCE_CITY_MAP && window.PROVINCE_CITY_MAP[adcode];
+        const isVisited = getVisitedProvinces().has(adcode);
+
+        let html = `<div class="tooltip-name">${name}</div>`;
+        if (provinceInfo) {
+            html += `<div class="tooltip-sub">${provinceInfo.nameEn}${isVisited ? ' · 已去过' : ''}</div>`;
+        }
+        tooltip.innerHTML = html;
+        tooltip.classList.add('visible');
+        moveTooltip(e);
+    }
+
+    function moveTooltip(e) {
+        const tooltip = document.getElementById('chinaTooltip');
+        tooltip.style.left = (e.clientX + 16) + 'px';
+        tooltip.style.top = (e.clientY - 10) + 'px';
+    }
+
+    function onProvinceLeave() {
+        document.getElementById('chinaTooltip').classList.remove('visible');
+    }
+
+    function onProvinceClick(e, feature, isVisited) {
+        if (!isVisited) {
+            const path = e.currentTarget;
+            path.style.animation = 'none';
+            path.offsetHeight;
+            path.style.animation = '';
+            return;
+        }
+        const adcode = String(feature.properties.adcode);
+        zoomToProvince(adcode, feature);
+        showProvinceDetailPanel(adcode);
+    }
+
+    function zoomToProvince(adcode, feature) {
+        currentProvinceZoom = adcode;
+        const svg = document.getElementById('chinaMapSvg');
+        const g = document.getElementById('provincesGroup');
+        const cityGroup = document.getElementById('cityMarkersGroup');
+        const routeGroup = document.getElementById('routeLinesGroup');
+        const path = svg.querySelector(`[data-adcode="${adcode}"]`);
+        if (!path) return;
+
+        const bbox = path.getBBox();
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        const scale = Math.min(w / bbox.width, h / bbox.height) * 0.55;
+        const tx = w / 2 - (bbox.x + bbox.width / 2) * scale;
+        const ty = h / 2 - (bbox.y + bbox.height / 2) * scale;
+
+        const transformStr = `translate(${tx}px, ${ty}px) scale(${scale})`;
+        const transitionStr = 'transform 0.8s cubic-bezier(0.4, 0, 0.2, 1)';
+        g.style.transform = transformStr;
+
+        svg.querySelectorAll('.province').forEach(p => {
+            if (p.dataset.adcode === adcode) {
+                p.classList.add('zoomed');
+                p.classList.remove('dimmed');
+            } else {
+                p.classList.add('dimmed');
+                p.classList.remove('zoomed');
+            }
+        });
+
+        const provinceInfo = window.PROVINCE_CITY_MAP && window.PROVINCE_CITY_MAP[adcode];
+        const provinceCities = provinceInfo ? provinceInfo.cities : [];
+        cityGroup.querySelectorAll('.city-marker').forEach(marker => {
+            const cityName = marker.dataset.city;
+            if (provinceCities.includes(cityName)) {
+                marker.style.opacity = '1';
+                marker.style.pointerEvents = 'auto';
+            } else {
+                marker.style.opacity = '0';
+                marker.style.pointerEvents = 'none';
+            }
+        });
+
+        cityGroup.style.transform = transformStr;
+        cityGroup.style.transition = transitionStr;
+
+        if (routeGroup) {
+            routeGroup.style.transform = transformStr;
+            routeGroup.style.transition = transitionStr;
+            routeGroup.style.opacity = '0.3';
+        }
+
+        document.getElementById('chinaBackProvinceBtn').classList.add('visible');
+    }
+
+    function zoomOutToFull() {
+        currentProvinceZoom = null;
+        const svg = document.getElementById('chinaMapSvg');
+        const g = document.getElementById('provincesGroup');
+        const cityGroup = document.getElementById('cityMarkersGroup');
+        const routeGroup = document.getElementById('routeLinesGroup');
+
+        g.style.transform = 'translate(0, 0) scale(1)';
+        cityGroup.style.transform = 'translate(0, 0) scale(1)';
+        if (routeGroup) {
+            routeGroup.style.transform = 'translate(0, 0) scale(1)';
+            routeGroup.style.opacity = '';
+        }
+
+        svg.querySelectorAll('.province').forEach(p => {
+            p.classList.remove('dimmed', 'zoomed');
+        });
+
+        cityGroup.querySelectorAll('.city-marker').forEach(marker => {
+            marker.style.opacity = '';
+            marker.style.pointerEvents = '';
+        });
+
+        document.getElementById('chinaBackProvinceBtn').classList.remove('visible');
+        document.getElementById('globePopup').classList.remove('visible');
+        hideProvinceDetailPanel();
+    }
+
+    function rebuildChinaMap() {
+        if (!chinaProvinceFeatures) return;
+        const svg = document.getElementById('chinaMapSvg');
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+
+        // Recalculate custom projection for new viewport
+        const lngMin = 73, lngMax = 135, latMin = 18, latMax = 54;
+        const mx2 = w * 0.05, mt2 = h * 0.08, mb2 = h * 0.05;
+        const drawW2 = w - mx2 * 2, drawH2 = h - mt2 - mb2;
+        function mercY2(lat) { return Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI / 180) / 2)); }
+        const yMin2 = mercY2(latMin), yMax2 = mercY2(latMax);
+        const geoW2 = (lngMax - lngMin) * Math.PI / 180;
+        const geoH2 = yMax2 - yMin2;
+        const sc2 = Math.min(drawW2 / geoW2, drawH2 / geoH2);
+        const realW2 = geoW2 * sc2, realH2 = geoH2 * sc2;
+        const ox2 = mx2 + (drawW2 - realW2) / 2;
+        const oy2 = mt2 + (drawH2 - realH2) / 2;
+        chinaProjection = function(coords) {
+            const x = ox2 + ((coords[0] - lngMin) * Math.PI / 180) * sc2;
+            const y = oy2 + (yMax2 - mercY2(coords[1])) * sc2;
+            return [x, y];
+        };
+        chinaProjection.stream = function(s) {
+            return {
+                point: function(lng, lat) { const p = chinaProjection([lng, lat]); s.point(p[0], p[1]); },
+                lineStart: function() { s.lineStart(); },
+                lineEnd: function() { s.lineEnd(); },
+                polygonStart: function() { s.polygonStart(); },
+                polygonEnd: function() { s.polygonEnd(); },
+                sphere: function() {}
+            };
+        };
+        chinaPathGen = d3.geoPath().projection(chinaProjection);
+
+        // Update province paths
+        svg.querySelectorAll('.province').forEach(path => {
+            const adcode = path.dataset.adcode;
+            const feature = chinaProvinceFeatures.find(f => String(f.properties.adcode) === adcode);
+            if (feature) path.setAttribute('d', chinaPathGen(feature));
+        });
+
+        // Update city marker positions
+        const cnCities = _globeWC.filter(c => c.country === 'CN');
+        cnCities.forEach(city => {
+            const marker = svg.querySelector(`.city-marker[data-city="${city.nameEn}"]`);
+            if (!marker) return;
+            const projected = chinaProjection([city.lng, city.lat]);
+            if (!projected) return;
+            const [cx, cy] = projected;
+            marker.querySelectorAll('circle').forEach(circle => {
+                circle.setAttribute('cx', cx);
+                circle.setAttribute('cy', cy);
+            });
+            const text = marker.querySelector('text');
+            if (text) {
+                const isTravel = marker.classList.contains('city-marker-travel');
+                text.setAttribute('x', cx + (isTravel ? 10 : 6));
+                text.setAttribute('y', cy + 4);
+            }
+        });
+
+        // Rebuild route lines with new projection
+        const routeGroup = document.getElementById('routeLinesGroup');
+        if (routeGroup) {
+            routeGroup.innerHTML = '';
+            renderRouteLines(routeGroup);
+        }
+
+        if (currentProvinceZoom) {
+            zoomToProvince(currentProvinceZoom, chinaProvinceFeatures.find(f => String(f.properties.adcode) === currentProvinceZoom));
+        }
     }
 
     function handleGlobeClick(e) {
@@ -1259,52 +1865,8 @@
         const w = window.innerWidth;
         const h = window.innerHeight;
 
-        // === China flat map mode click handling ===
-        if (chinaMapMode) {
-            // Check back button
-            const btnX = 30, btnY = h - 60, btnW = 110, btnH = 36;
-            if (mx >= btnX && mx <= btnX + btnW && my >= btnY && my <= btnY + btnH) {
-                exitChinaMap();
-                return;
-            }
-
-            // Check travel city clicks
-            if (_globeTC) {
-                let clickedKey = null;
-                let clickedCity = null;
-                Object.keys(_globeTC).forEach(key => {
-                    const city = _globeWC.find(c => c.nameEn === key);
-                    if (!city || city.country !== 'CN') return;
-                    const p = chinaProject(city.lat, city.lng, w, h);
-                    const dist = Math.hypot(p.x - mx, p.y - my);
-                    if (dist < 20) { clickedKey = key; clickedCity = city; }
-                });
-
-                const popup = document.getElementById('globePopup');
-                if (clickedKey) {
-                    const data = _globeTC[clickedKey];
-                    let html = `<span class="popup-close">&times;</span>`;
-                    html += `<div class="popup-city">${clickedCity.name}</div>`;
-                    data.events.forEach(ev => {
-                        html += `<div class="popup-event">`;
-                        html += `<span class="event-date">${ev.dateKey}</span>`;
-                        html += `<span class="event-title">${ev.title}</span>`;
-                        html += `<a class="event-link" href="index.html#gallery" data-date="${ev.dateKey}">照片</a>`;
-                        html += `</div>`;
-                    });
-                    popup.innerHTML = html;
-                    popup.style.left = Math.min(e.clientX + 10, w - 340) + 'px';
-                    popup.style.top = Math.min(e.clientY - 20, h - 300) + 'px';
-                    popup.classList.add('visible');
-                    popup.querySelector('.popup-close').addEventListener('click', () => {
-                        popup.classList.remove('visible');
-                    });
-                } else {
-                    popup.classList.remove('visible');
-                }
-            }
-            return;
-        }
+        // In china map mode, SVG overlay handles all interactions
+        if (chinaMapMode) return;
 
         // === Globe mode click handling ===
         const cx = w / 2;
@@ -1799,6 +2361,9 @@
         window.addEventListener('resize', () => {
             if (!isTransitioning) {
                 applyLayout(CONFIG.MODES[currentMode]);
+            }
+            if (chinaMapInitialized && chinaMapMode) {
+                rebuildChinaMap();
             }
         });
     }
