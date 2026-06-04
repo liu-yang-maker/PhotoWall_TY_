@@ -1445,21 +1445,15 @@
 
         // Traveling dot with animateMotion
         const dot = createSVGEl('circle', { r: '3.5', class: 'route-travel-dot' });
-        const motion = createSVGEl('animateMotion', {
-            dur: `${points.length * 3}s`,
-            repeatCount: 'indefinite',
-            path: pathD.replace(`M ${points[0][0]},${points[0][1]}`, `M 0,0`)
-        });
-        // Use the actual path for animateMotion
-        const motionPath = createSVGEl('animateMotion', {
+        mainPath.setAttribute('id', 'routeMainPath');
+        const motionAnim = createSVGEl('animateMotion', {
             dur: `${Math.max(points.length * 2.5, 8)}s`,
             repeatCount: 'indefinite'
         });
         const mpath = createSVGEl('mpath', {});
-        mainPath.setAttribute('id', 'routeMainPath');
-        mpath.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', '#routeMainPath');
-        motionPath.appendChild(mpath);
-        dot.appendChild(motionPath);
+        mpath.setAttribute('href', '#routeMainPath');
+        motionAnim.appendChild(mpath);
+        dot.appendChild(motionAnim);
         routeGroup.appendChild(dot);
     }
 

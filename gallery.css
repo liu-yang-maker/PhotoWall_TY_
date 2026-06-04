@@ -87,8 +87,8 @@ body {
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border: 1.5px solid var(--card-border);
-    border-radius: 16px;
-    padding: 16px 48px;
+    border-radius: 12px;
+    padding: 10px 32px;
     text-align: center;
     box-shadow: 0 4px 30px rgba(255, 215, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.06);
     position: relative;
@@ -116,31 +116,31 @@ body {
 }
 
 .subtitle {
-    font-size: 11px;
-    letter-spacing: 3px;
+    font-size: 9px;
+    letter-spacing: 2.5px;
     color: var(--text-muted);
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     text-transform: uppercase;
 }
 
 .timer {
     font-family: 'Ma Shan Zheng', cursive;
-    font-size: 18px;
+    font-size: 15px;
     color: var(--text-light);
-    margin-bottom: 4px;
+    margin-bottom: 3px;
     white-space: nowrap;
 }
 
 .timer-num {
     font-family: 'Montserrat', sans-serif;
-    font-size: 28px;
+    font-size: 22px;
     font-weight: 700;
     color: #fff;
     text-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
 }
 
 .tagline {
-    font-size: 11px;
+    font-size: 9px;
     color: var(--text-muted);
     letter-spacing: 0.5px;
 }
@@ -865,7 +865,6 @@ body {
     stroke-linecap: round;
     stroke-linejoin: round;
     opacity: 0;
-    animation: routeFadeIn 1s forwards;
 }
 
 .route-lines-group path.route-dash {
@@ -884,7 +883,7 @@ body {
 }
 
 @keyframes routeFadeIn {
-    from { opacity: 0; stroke-dashoffset: 200; }
+    from { opacity: 0; }
     to { opacity: 0.85; stroke-dashoffset: 0; }
 }
 
