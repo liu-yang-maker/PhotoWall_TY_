@@ -1204,11 +1204,14 @@
                 s.y += s.vy;
                 s.life--;
                 const progress = s.life / s.maxLife;
+                const speed = Math.hypot(s.vx, s.vy);
+                const dirX = s.vx / speed;
+                const dirY = s.vy / speed;
                 const tailLen = 30 * progress;
                 ctx.beginPath();
                 ctx.moveTo(s.x, s.y);
-                ctx.lineTo(s.x - s.vx * tailLen / s.vx, s.y - s.vy * tailLen / s.vy);
-                const grad = ctx.createLinearGradient(s.x, s.y, s.x - s.vx * 5, s.y - s.vy * 5);
+                ctx.lineTo(s.x - dirX * tailLen, s.y - dirY * tailLen);
+                const grad = ctx.createLinearGradient(s.x, s.y, s.x - dirX * tailLen, s.y - dirY * tailLen);
                 grad.addColorStop(0, `rgba(255, 235, 180, ${progress * 0.8})`);
                 grad.addColorStop(1, 'rgba(255, 235, 180, 0)');
                 ctx.strokeStyle = grad;
@@ -1233,6 +1236,11 @@
         canvas.style.width = w + 'px';
         canvas.style.height = h + 'px';
         ctx.scale(devicePixelRatio, devicePixelRatio);
+
+        chinaParticles.forEach(p => {
+            if (p.x > w) p.x = Math.random() * w;
+            if (p.y > h) p.y = Math.random() * h;
+        });
 
         function tick() {
             ctx.clearRect(0, 0, w, h);
@@ -1277,11 +1285,14 @@
                 s.y += s.vy;
                 s.life--;
                 const progress = s.life / s.maxLife;
+                const speed = Math.hypot(s.vx, s.vy);
+                const dirX = s.vx / speed;
+                const dirY = s.vy / speed;
                 const tailLen = 30 * progress;
                 ctx.beginPath();
                 ctx.moveTo(s.x, s.y);
-                ctx.lineTo(s.x - s.vx * tailLen / s.vx, s.y - s.vy * tailLen / s.vy);
-                const grad = ctx.createLinearGradient(s.x, s.y, s.x - s.vx * 5, s.y - s.vy * 5);
+                ctx.lineTo(s.x - dirX * tailLen, s.y - dirY * tailLen);
+                const grad = ctx.createLinearGradient(s.x, s.y, s.x - dirX * tailLen, s.y - dirY * tailLen);
                 grad.addColorStop(0, `rgba(255, 235, 180, ${progress * 0.8})`);
                 grad.addColorStop(1, 'rgba(255, 235, 180, 0)');
                 ctx.strokeStyle = grad;
@@ -1335,10 +1346,12 @@
         document.getElementById('provincePanelTrips').innerHTML = tripsHtml;
 
         const matchedPhotos = [];
+        const addedPhotos = new Set();
         allEvents.forEach(ev => {
             imageList.forEach(img => {
-                if (img.startsWith(ev.dateKey) && matchedPhotos.length < 12) {
+                if (img.startsWith(ev.dateKey) && !addedPhotos.has(img) && matchedPhotos.length < 12) {
                     matchedPhotos.push(img);
+                    addedPhotos.add(img);
                 }
             });
         });
@@ -1416,7 +1429,7 @@
             const curr = points[i];
             const midX = (prev[0] + curr[0]) / 2;
             const midY = (prev[1] + curr[1]) / 2;
-            const cpX = midX + (Math.random() - 0.5) * 20;
+            const cpX = midX + ((i % 2 === 0 ? 1 : -1) * 12);
             const cpY = midY - Math.abs(curr[1] - prev[1]) * 0.3 - 10;
             pathD += ` Q ${cpX},${cpY} ${curr[0]},${curr[1]}`;
         }
@@ -1468,7 +1481,7 @@
             if (typeof d3 === 'undefined' || !d3.geoMercator) {
                 throw new Error('d3-geo not loaded');
             }
-            const res = await fetch('https://geo.datav.aliyun.com/areas_v3/bound/100000_full.json');
+            const res = await fetch('china-geo.json');
             const geojson = await res.json();
             // Filter out nine-dash line (100000_JD) which stretches bounds
             chinaProvinceFeatures = geojson.features.filter(f => {
