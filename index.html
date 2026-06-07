@@ -105,8 +105,8 @@
             </div>
         </section>
 
-        <!-- 互动小票 + 透明幕布照片 + 玻璃破碎（三列） -->
-        <section id="receiptStage" aria-label="Interactive receipt, curtain and glass">
+        <!-- 互动小票 + 幕布 + 玻璃 + 爱心粒子（四列） -->
+        <section id="receiptStage" aria-label="Interactive receipt, curtain, glass and heart particles">
             <div class="receipt-curtain-row">
                 <div class="receipt-shell">
                     <div class="receipt-hint">按住小票任意位置拖拽，可弯曲、折叠并自然回弹</div>
@@ -123,6 +123,10 @@
                         <canvas id="glassCanvas"></canvas>
                         <button id="glassRestore" class="glass-restore-btn">&#10227; 复原玻璃</button>
                     </div>
+                </div>
+                <div class="heart-shell">
+                    <div class="heart-hint">把鼠标移过去，粒子会被指尖吹散；点一下，心会跳一次</div>
+                    <div id="heartMount" class="heart-mount"></div>
                 </div>
             </div>
         </section>
@@ -153,7 +157,7 @@
         <a href="#loveQuote" class="side-nav-dot" data-section="loveQuote" title="Love Quote"></a>
         <a href="#dates" class="side-nav-dot" data-section="dates" title="Dates"></a>
         <a href="#timeline" class="side-nav-dot" data-section="timeline" title="Timeline"></a>
-        <a href="#receiptStage" class="side-nav-dot" data-section="receiptStage" title="Receipt &amp; curtain"></a>
+        <a href="#receiptStage" class="side-nav-dot" data-section="receiptStage" title="Receipt &amp; curtain &amp; glass &amp; heart"></a>
         <a href="#gallery" class="side-nav-dot" data-section="gallery" title="Gallery"></a>
     </nav>
 
@@ -165,6 +169,7 @@
     <script src="receipt.js"></script>
     <script src="curtain.js"></script>
     <script src="glass.js"></script>
+    <script src="loveheart.js"></script>
     <script src="hearts.js"></script>
     <script src="stars.js"></script>
     <script src="meteors.js"></script>

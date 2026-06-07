@@ -236,9 +236,10 @@
   // 背景透明，让 .curtain-shell 的渐变直接当"墙面/挂布的环境"
   scene.background = null;
 
+  // 4 列布局下窄格 (~336px wide) 的横向取景会被压扁，把相机往后挪一点保护构图
   const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 50);
-  camera.position.set(0, 1.4, 8.0);
-  camera.lookAt(0, 0.8, 0);
+  camera.position.set(0, 1.4, 9.2);
+  camera.lookAt(0, 0.7, 0);
 
   const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
   renderer.outputColorSpace = THREE.SRGBColorSpace;
