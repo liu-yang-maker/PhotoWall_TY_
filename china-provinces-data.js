@@ -16,7 +16,7 @@ const PROVINCE_CITY_MAP = {
     '330000': { name: '浙江省', nameEn: 'Zhejiang', cities: ['hangzhou', 'ningbo', 'taizhou'] },
     '340000': { name: '安徽省', nameEn: 'Anhui', cities: ['hefei'] },
     '350000': { name: '福建省', nameEn: 'Fujian', cities: ['fuzhou', 'xiamen'] },
-    '360000': { name: '江西省', nameEn: 'Jiangxi', cities: [] },
+    '360000': { name: '江西省', nameEn: 'Jiangxi', cities: ['jiujiang'] },
     '370000': { name: '山东省', nameEn: 'Shandong', cities: ['jinan', 'qingdao', 'yantai'] },
     '410000': { name: '河南省', nameEn: 'Henan', cities: ['zhengzhou'] },
     '420000': { name: '湖北省', nameEn: 'Hubei', cities: ['wuhan'] },

@@ -280,6 +280,27 @@ const timelineData = [
         description: "小猪咪来了，鸣人慌了，希望他俩和谐相处。"
     },
     {
+        date: "2026.06.18",
+        dateKey: "2026-06-18",
+        city: "jiujiang",
+        title: "我们在九江，你第一次去我家，一起过端午",
+        description: "希望我们以后可以一起回家，我爱你。"
+    },
+    {
+        date: "2026.06.21",
+        dateKey: "2026-06-21",
+        city: "beijing",
+        title: "我们在北京，毕业典礼",
+        description: "第一次参加毕业典礼，有你，有我爸妈，很幸运有你们在。还举办了谢师宴，感谢我的老师和同门一起来庆祝。"
+    },
+    {
+        date: "2026.06.22",
+        dateKey: "2026-06-22",
+        city: "shanghai",
+        title: "我们在上海，回上海开启正式打工生活",
+        description: "回上海开启正式打工生活，你好好忙科研，我好好忙工作，期待我们都一起有好的结果。"
+    },
+    {
         date: "Our Story",
         dateKey: "3030-01-01",
         city: null,

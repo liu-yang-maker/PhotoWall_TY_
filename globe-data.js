@@ -41,6 +41,7 @@ const WORLD_CITIES = [
     { name: '昆明', nameEn: 'kunming', lat: 25.04, lng: 102.68, country: 'CN' },
     { name: '厦门', nameEn: 'xiamen', lat: 24.48, lng: 118.09, country: 'CN' },
     { name: '台州', nameEn: 'taizhou', lat: 28.66, lng: 121.42, country: 'CN' },
+    { name: '九江', nameEn: 'jiujiang', lat: 29.71, lng: 116.00, country: 'CN' },
     { name: '张家口', nameEn: 'zhangjiakou', lat: 40.77, lng: 114.88, country: 'CN' },
     { name: '郑州', nameEn: 'zhengzhou', lat: 34.75, lng: 113.65, country: 'CN' },
     { name: '合肥', nameEn: 'hefei', lat: 31.82, lng: 117.23, country: 'CN' },
