@@ -1,6 +1,7 @@
 // ============================================================
 // 旅行城市映射（从 script.js 的 timelineData 自动生成）
-// 你只需在 script.js 的 timelineData 中给每条事件加 city 字段即可
+// 已有城市：只需在 timelineData 加 city 字段（须与 WORLD_CITIES.nameEn 一致）
+// 新城市：还要在 WORLD_CITIES 补坐标，并在 china-provinces-data.js 的省份 cities 里登记
 // ============================================================
 function buildTravelCities() {
     const data = (typeof timelineData !== 'undefined') ? timelineData : window.timelineData;
@@ -24,6 +25,7 @@ const WORLD_CITIES = [
     { name: '上海', nameEn: 'shanghai', lat: 31.23, lng: 121.47, country: 'CN' },
     { name: '广州', nameEn: 'guangzhou', lat: 23.13, lng: 113.26, country: 'CN' },
     { name: '深圳', nameEn: 'shenzhen', lat: 22.54, lng: 114.06, country: 'CN' },
+    { name: '香港', nameEn: 'xianggang', lat: 22.32, lng: 114.17, country: 'CN' },
     { name: '成都', nameEn: 'chengdu', lat: 30.57, lng: 104.07, country: 'CN' },
     { name: '重庆', nameEn: 'chongqing', lat: 29.56, lng: 106.55, country: 'CN' },
     { name: '杭州', nameEn: 'hangzhou', lat: 30.27, lng: 120.15, country: 'CN' },

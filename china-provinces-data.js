@@ -35,7 +35,7 @@ const PROVINCE_CITY_MAP = {
     '640000': { name: '宁夏回族自治区', nameEn: 'Ningxia', cities: [] },
     '650000': { name: '新疆维吾尔自治区', nameEn: 'Xinjiang', cities: ['urumqi'] },
     '710000': { name: '台湾省', nameEn: 'Taiwan', cities: [] },
-    '810000': { name: '香港特别行政区', nameEn: 'Hong Kong', cities: [] },
+    '810000': { name: '香港特别行政区', nameEn: 'Hong Kong', cities: ['xianggang'] },
     '820000': { name: '澳门特别行政区', nameEn: 'Macau', cities: [] },
 };
 
