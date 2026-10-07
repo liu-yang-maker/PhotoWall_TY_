@@ -583,7 +583,7 @@ function renderStoryStage(index) {
     }
 
     const jump = photos.length
-        ? `<button class="story-jump" type="button" data-date-key="${item.dateKey}">看这一天的 ${photos.length} 张照片</button>`
+        ? `<button class="story-jump" type="button" data-date-key="${item.dateKey}">去照片墙看这 ${photos.length} 张</button>`
         : '<span></span>';
 
     stage.innerHTML = `
@@ -606,10 +606,18 @@ function renderStoryStage(index) {
         </div>
     `;
 
-    stage.querySelectorAll('.story-thumb, .story-more, .story-jump').forEach((btn) => {
+    stage.querySelectorAll('.story-thumb').forEach((btn) => {
         btn.addEventListener('click', () => {
-            const focusIndex = btn.dataset.photoIndex ? parseInt(btn.dataset.photoIndex, 10) : null;
-            scrollToPhotoByDate(btn.dataset.dateKey, Number.isInteger(focusIndex) ? focusIndex : null);
+            const photoIndex = parseInt(btn.dataset.photoIndex, 10);
+            const filename = imageList[photoIndex];
+            if (!filename) return;
+            const mediaType = isVideoFile(filename) ? 'video' : 'image';
+            showPopup(`images/${filename}`, parseDateFromFilename(filename), photoIndex, mediaType);
+        });
+    });
+    stage.querySelectorAll('.story-more, .story-jump').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            scrollToPhotoByDate(btn.dataset.dateKey);
         });
     });
     stage.querySelectorAll('.story-step').forEach((btn) => {
@@ -671,8 +679,11 @@ function renderTimeline() {
             </span>
             <span class="story-node-count is-empty"></span>
         `;
+        button.addEventListener('mousedown', (event) => {
+            event.preventDefault();
+        });
         button.addEventListener('click', () => {
-            selectStory(i, { scrollPhotos: true });
+            selectStory(i, { scrollPhotos: false });
         });
         rail.appendChild(button);
     });

@@ -987,13 +987,14 @@ main {
 }
 
 .story-jump {
-    padding: 10px 16px;
-    background: linear-gradient(135deg, var(--rose-gold), var(--accent));
-    color: #fff;
-    box-shadow: 0 8px 18px rgba(255, 111, 97, 0.24);
+    padding: 0;
+    background: none;
+    color: var(--rose-gold);
+    font-size: 13px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
 }
 
-.story-jump:hover,
 .story-step:hover:not(:disabled) {
     transform: translateY(-1px);
 }
