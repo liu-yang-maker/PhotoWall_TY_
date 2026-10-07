@@ -443,62 +443,295 @@ function startQuoteAutoRotate() {
     }, 5000);
 }
 
-// 时间轴和相册联动：根据日期滚动到对应照片
-function scrollToPhotoByDate(dateKey) {
-    if (!imageList || imageList.length === 0) return;
-    if (!dateKey) return;
+const STORY_CITIES = {
+    shanghai: '上海',
+    beijing: '北京',
+    taizhou: '台州',
+    zhangjiakou: '张家口',
+    dalian: '大连',
+    yantai: '烟台',
+    jiujiang: '九江',
+    shenzhen: '深圳',
+    xianggang: '香港',
+};
 
-    const targetIndex = imageList.findIndex((name) => name.startsWith(dateKey));
-    if (targetIndex === -1) return;
+let activeStoryIndex = -1;
+let storySyncLock = 0;
+let storyFollowGallery = false;
+const STORY_FILM_LIMIT = 8;
 
-    const targetImg = document.querySelector(`img[data-index="${targetIndex}"]`);
-    if (targetImg) {
-        const polaroid = targetImg.closest('.polaroid') || targetImg;
-        polaroid.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        polaroid.classList.add('highlight-photo');
-        setTimeout(() => {
-            polaroid.classList.remove('highlight-photo');
-        }, 1500);
+function escapeHtml(str) {
+    return String(str || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function linkifyHtml(escaped) {
+    return escaped.replace(/https?:\/\/[^\s<]+/g, (url) => {
+        return `<a href="${url}" target="_blank" rel="noopener">${url}</a>`;
+    });
+}
+
+function photosForDate(dateKey) {
+    if (!dateKey || !imageList || !imageList.length) return [];
+    const photos = [];
+    imageList.forEach((name, index) => {
+        if (name.startsWith(dateKey)) photos.push({ name, index });
+    });
+    return photos;
+}
+
+function findStoryIndexByDate(dateKey) {
+    if (!dateKey) return -1;
+    const exact = timelineData.findIndex((item) => item.dateKey === dateKey);
+    if (exact !== -1) return exact;
+    let best = -1;
+    timelineData.forEach((item, i) => {
+        if (!item.dateKey || item.dateKey.startsWith('3030')) return;
+        if (item.dateKey <= dateKey) best = i;
+    });
+    return best;
+}
+
+function storyRailLabel(item) {
+    if (!item.dateKey || item.dateKey.startsWith('3030')) return '未完';
+    const parts = item.date.split('.');
+    return parts.length >= 3 ? `${parts[1]}.${parts[2]}` : item.date;
+}
+
+function scrollRailToNode(node) {
+    const rail = document.getElementById('storyRail');
+    if (!rail || !node) return;
+    let left = rail.scrollLeft;
+    let top = rail.scrollTop;
+    const nodeLeft = node.offsetLeft;
+    const nodeRight = nodeLeft + node.offsetWidth;
+    const nodeTop = node.offsetTop;
+    const nodeBottom = nodeTop + node.offsetHeight;
+    if (nodeLeft < left) left = nodeLeft;
+    else if (nodeRight > left + rail.clientWidth) left = nodeRight - rail.clientWidth;
+    if (nodeTop < top) top = nodeTop;
+    else if (nodeBottom > top + rail.clientHeight) top = nodeBottom - rail.clientHeight;
+    if (left !== rail.scrollLeft || top !== rail.scrollTop) {
+        rail.scrollTo({ left, top, behavior: 'smooth' });
     }
 }
 
-// 渲染时间轴（点击某一条 → 滚动到对应日期的照片）
-function renderTimeline() {
-    const timelineContainer = document.getElementById('timelineContainer');
-    timelineContainer.innerHTML = '';
+function clearPhotoLink() {
+    document.querySelectorAll('.is-linked').forEach((el) => el.classList.remove('is-linked'));
+}
 
-    const line = document.createElement('div');
-    line.className = 'timeline-line';
-    timelineContainer.appendChild(line);
+function scrollToPhotoByDate(dateKey, focusIndex) {
+    if (!dateKey) return false;
+    const group = document.querySelector(`.gallery-date-group[data-date-key="${dateKey}"]`);
+    if (!group) return false;
 
-    timelineData.forEach((item, i) => {
-        const timelineItem = document.createElement('div');
-        timelineItem.className = 'timeline-item';
-        timelineItem.style.animationDelay = `${i * 0.15}s`;
+    const separator = group.previousElementSibling;
+    let target = separator && separator.classList.contains('gallery-date-separator') ? separator : group;
+    if (focusIndex != null) {
+        const focused = group.querySelector(`[data-index="${focusIndex}"]`);
+        const card = focused ? (focused.closest('.polaroid') || focused) : null;
+        if (card) target = card;
+    }
 
-        timelineItem.innerHTML = `
-            <div class="timeline-content">
-                <h3>${item.title}</h3>
-                <p>${item.description}</p>
+    storySyncLock = Date.now() + 1200;
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    clearPhotoLink();
+    group.classList.add('is-linked');
+    if (separator && separator.classList.contains('gallery-date-separator')) {
+        separator.classList.add('is-linked');
+    }
+
+    if (focusIndex != null) {
+        const polaroid = group.querySelector(`img[data-index="${focusIndex}"]`)?.closest('.polaroid');
+        if (polaroid) {
+            polaroid.classList.add('highlight-photo');
+            setTimeout(() => polaroid.classList.remove('highlight-photo'), 1600);
+        }
+    }
+    return true;
+}
+
+function renderStoryStage(index) {
+    const stage = document.getElementById('storyStage');
+    const item = timelineData[index];
+    if (!stage || !item) return;
+
+    const photos = photosForDate(item.dateKey);
+    const city = item.city ? STORY_CITIES[item.city] : '';
+    const shown = photos.slice(0, STORY_FILM_LIMIT);
+    const extra = photos.length - shown.length;
+
+    let film = '';
+    if (shown.length) {
+        film = `<div class="story-film">${shown.map((photo) => {
+            const video = isVideoFile(photo.name);
+            const src = video ? VIDEO_PLACEHOLDER : `images/thumbs/${photo.name}`;
+            const fallback = video ? '' : ` onerror="this.src='images/${photo.name}'"`;
+            return `<button class="story-thumb${video ? ' is-video' : ''}" type="button" data-photo-index="${photo.index}" data-date-key="${item.dateKey}">
+                <img src="${src}" alt="" loading="lazy"${fallback}>
+            </button>`;
+        }).join('')}${extra > 0 ? `<button class="story-more" type="button" data-date-key="${item.dateKey}">+${extra}</button>` : ''}</div>`;
+    } else {
+        const emptyText = item.dateKey && item.dateKey.startsWith('3030')
+            ? '下一张照片，会接在这里。'
+            : '这一段先写在字里，照片还在路上。';
+        film = `<p class="story-empty">${emptyText}</p>`;
+    }
+
+    const jump = photos.length
+        ? `<button class="story-jump" type="button" data-date-key="${item.dateKey}">看这一天的 ${photos.length} 张照片</button>`
+        : '<span></span>';
+
+    stage.innerHTML = `
+        <div class="story-stage-top">
+            <div class="story-stage-meta">
+                <span class="story-stage-date">${escapeHtml(item.date)}</span>
+                ${city ? `<span class="story-stage-city">${city}</span>` : ''}
             </div>
-            <div class="timeline-dot"></div>
-            <div class="timeline-date">${item.date}</div>
-        `;
+            <span class="story-stage-index">${String(index + 1).padStart(2, '0')} / ${String(timelineData.length).padStart(2, '0')}</span>
+        </div>
+        <h3>${escapeHtml(item.title)}</h3>
+        <p>${linkifyHtml(escapeHtml(item.description))}</p>
+        ${film}
+        <div class="story-actions">
+            ${jump}
+            <div class="story-steps">
+                <button class="story-step" type="button" data-step="-1" ${index === 0 ? 'disabled' : ''}>上一段</button>
+                <button class="story-step" type="button" data-step="1" ${index === timelineData.length - 1 ? 'disabled' : ''}>下一段</button>
+            </div>
+        </div>
+    `;
 
-        // 时间轴点击联动相册
-        timelineItem.style.cursor = 'pointer';
-        timelineItem.addEventListener('click', () => {
-            if (item.dateKey) {
-                scrollToPhotoByDate(item.dateKey);
-            }
+    stage.querySelectorAll('.story-thumb, .story-more, .story-jump').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const focusIndex = btn.dataset.photoIndex ? parseInt(btn.dataset.photoIndex, 10) : null;
+            scrollToPhotoByDate(btn.dataset.dateKey, Number.isInteger(focusIndex) ? focusIndex : null);
         });
+    });
+    stage.querySelectorAll('.story-step').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const next = index + parseInt(btn.dataset.step, 10);
+            selectStory(next, { scrollPhotos: false });
+        });
+    });
+}
 
-        timelineContainer.appendChild(timelineItem);
+function refreshStoryCounts() {
+    document.querySelectorAll('.story-node').forEach((node) => {
+        const item = timelineData[parseInt(node.dataset.index, 10)];
+        const count = photosForDate(item && item.dateKey).length;
+        const badge = node.querySelector('.story-node-count');
+        if (!badge) return;
+        badge.textContent = count ? String(count) : '';
+        badge.classList.toggle('is-empty', !count);
+    });
+}
+
+function selectStory(index, options) {
+    if (index < 0 || index >= timelineData.length) return;
+    const opts = options || {};
+    activeStoryIndex = index;
+
+    document.querySelectorAll('.story-node').forEach((node) => {
+        const on = parseInt(node.dataset.index, 10) === index;
+        node.classList.toggle('active', on);
+        node.setAttribute('aria-selected', on ? 'true' : 'false');
+        if (on) scrollRailToNode(node);
     });
 
-    requestAnimationFrame(() => {
-        const totalWidth = timelineContainer.scrollWidth;
-        line.style.width = `${totalWidth}px`;
+    renderStoryStage(index);
+
+    if (opts.scrollPhotos) {
+        const item = timelineData[index];
+        scrollToPhotoByDate(item.dateKey);
+    }
+}
+
+function renderTimeline() {
+    const rail = document.getElementById('storyRail');
+    if (!rail) return;
+    rail.innerHTML = '';
+
+    timelineData.forEach((item, i) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'story-node';
+        button.dataset.index = String(i);
+        button.setAttribute('role', 'tab');
+        button.setAttribute('aria-selected', 'false');
+        button.innerHTML = `
+            <span class="story-node-heart"></span>
+            <span class="story-node-copy">
+                <span class="story-node-date">${escapeHtml(storyRailLabel(item))}</span>
+                <span class="story-node-title">${escapeHtml(item.title)}</span>
+            </span>
+            <span class="story-node-count is-empty"></span>
+        `;
+        button.addEventListener('click', () => {
+            selectStory(i, { scrollPhotos: true });
+        });
+        rail.appendChild(button);
+    });
+
+    const latest = timelineData.length > 1 && timelineData[timelineData.length - 1].dateKey.startsWith('3030')
+        ? timelineData.length - 2
+        : Math.max(timelineData.length - 1, 0);
+    selectStory(latest, { scrollPhotos: false });
+}
+
+function galleryIsReading() {
+    const gallery = document.getElementById('gallery');
+    if (!gallery) return false;
+    const rect = gallery.getBoundingClientRect();
+    return rect.top < window.innerHeight * 0.45 && rect.bottom > window.innerHeight * 0.3;
+}
+
+function syncStoryFromGallery(dateKey) {
+    if (!storyFollowGallery || Date.now() < storySyncLock) return;
+    if (!galleryIsReading()) return;
+    const index = findStoryIndexByDate(dateKey);
+    if (index < 0 || index === activeStoryIndex) return;
+    selectStory(index, { scrollPhotos: false });
+}
+
+function bindGalleryStorySync() {
+    const groups = document.querySelectorAll('.gallery-date-group');
+    if (!groups.length) return;
+
+    const visible = new Map();
+    const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+            const key = entry.target.getAttribute('data-date-key');
+            if (entry.isIntersecting) visible.set(key, entry.intersectionRatio);
+            else visible.delete(key);
+        });
+        let bestKey = null;
+        let bestRatio = 0;
+        visible.forEach((ratio, key) => {
+            if (ratio > bestRatio) {
+                bestRatio = ratio;
+                bestKey = key;
+            }
+        });
+        if (bestKey) syncStoryFromGallery(bestKey);
+    }, { threshold: [0.35, 0.6], rootMargin: '-30% 0px -45% 0px' });
+
+    groups.forEach((group) => observer.observe(group));
+    window.addEventListener('scroll', () => {
+        if (galleryIsReading()) storyFollowGallery = true;
+    }, { passive: true });
+
+    document.querySelectorAll('.gallery-date-separator.has-story').forEach((separator) => {
+        separator.addEventListener('click', () => {
+            const index = parseInt(separator.dataset.storyIndex, 10);
+            if (Number.isNaN(index)) return;
+            selectStory(index, { scrollPhotos: false });
+            document.getElementById('timeline').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
     });
 }
 
@@ -540,11 +773,17 @@ function buildGalleryStructure() {
             currentDate = dateKey;
             posInGroup = 0;
 
-            // 日期分隔标签
+            // 日期分隔标签（有对应故事时带上标题，点一下回到时间轴）
             const separator = document.createElement('div');
             separator.className = 'gallery-date-separator';
             const parts = dateKey.split('-');
-            separator.innerHTML = `<span class="date-separator-text">${parts[0]}.${parts[1]}.${parts[2]}</span>`;
+            const storyIndex = timelineData.findIndex((item) => item.dateKey === dateKey);
+            if (storyIndex !== -1) {
+                separator.classList.add('has-story');
+                separator.dataset.storyIndex = String(storyIndex);
+            }
+            const storyTitle = storyIndex !== -1 ? timelineData[storyIndex].title : '';
+            separator.innerHTML = `<span class="date-separator-text">${parts[0]}.${parts[1]}.${parts[2]}</span>${storyTitle ? `<span class="date-separator-title">${escapeHtml(storyTitle)}</span>` : ''}`;
             galleryGrid.appendChild(separator);
 
             // 日期分组容器
@@ -665,6 +904,8 @@ function createVideoElement(thumbImg, listIndex, filename) {
     polaroid.appendChild(imgElement);
     polaroid.appendChild(dateLabel);
     polaroid.addEventListener('click', function () {
+        const storyIndex = findStoryIndexByDate(filename.substring(0, 10));
+        if (storyIndex >= 0) selectStory(storyIndex, { scrollPhotos: false });
         showPopup(imgElement.dataset.large, dateStr, listIndex, 'video');
     });
 
@@ -699,6 +940,8 @@ function createImageElement(thumbImg, listIndex, filename) {
     polaroid.appendChild(imgElement);
     polaroid.appendChild(dateLabel);
     polaroid.addEventListener('click', function () {
+        const storyIndex = findStoryIndexByDate(filename.substring(0, 10));
+        if (storyIndex >= 0) selectStory(storyIndex, { scrollPhotos: false });
         showPopup(imgElement.dataset.large, dateStr, listIndex, 'image');
     });
 
@@ -1076,7 +1319,12 @@ window.onload = function () {
         startQuoteAutoRotate();
     });
 
-    loadImageList().then(loadAllImages);
+    loadImageList().then(() => {
+        refreshStoryCounts();
+        if (activeStoryIndex >= 0) renderStoryStage(activeStoryIndex);
+        loadAllImages();
+        bindGalleryStorySync();
+    });
 
     document.getElementById('closeBtn').addEventListener('click', closePopup);
 
