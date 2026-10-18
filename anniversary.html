@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>我们的第一圈年轮 · 一周年纪念</title>
+    <link rel="stylesheet" href="anniversary.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+    <link rel="apple-touch-icon" sizes="180x180" href="readme_img/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="readme_img/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="readme_img/favicon/favicon-16x16.png">
+</head>
+<body class="is-opening">
+    <!-- 飘动的小爱心背景 -->
+    <div class="hearts-field" id="heartsField" aria-hidden="true"></div>
+
+    <!-- 第一幕 · 开场 -->
+    <section id="opening" class="opening">
+        <header class="opening-top">
+            <div class="brand-mini">
+                <span class="brand-heart">&#9825;</span>
+                <div class="brand-text">
+                    <div class="brand-name">写给我们的一周年</div>
+                    <div class="brand-en">A LITTLE WISH FOR TWO</div>
+                </div>
+            </div>
+            <button class="skip-btn" id="skipOpening">跳过开场 &#8599;</button>
+        </header>
+
+        <div class="opening-core">
+            <p class="eyebrow">ONE YEAR OF US · MANY MORE TO COME</p>
+            <h1 class="opening-title">一周年快乐，我们。</h1>
+            <p class="opening-sub">愿这一刻，和往后的每一刻，都有你。</p>
+            <p class="opening-names">晓彤 <span>&amp;</span> 洋</p>
+
+            <div class="cake-wrap" aria-hidden="true">
+                <div class="cake-heart cake-heart-l">
+                    <svg viewBox="0 0 60 56" width="48" height="46"><path d="M30 52C8 36 2 24 8 14c4-7 14-7 18 1 1 2 3 2 4 0 4-8 14-8 18-1 6 10 0 22-18 38z" fill="#e7a9ae"/><circle cx="21" cy="24" r="2.4" fill="#6b4b4b"/><circle cx="33" cy="24" r="2.4" fill="#6b4b4b"/><path d="M23 31c2 2.4 8 2.4 10 0" stroke="#6b4b4b" stroke-width="1.8" fill="none" stroke-linecap="round"/><circle cx="16" cy="30" r="2.6" fill="#f3c6ca" opacity="0.8"/><circle cx="40" cy="30" r="2.6" fill="#f3c6ca" opacity="0.8"/></svg>
+                </div>
+                <div class="cake-heart cake-heart-r">
+                    <svg viewBox="0 0 60 56" width="42" height="40"><path d="M30 52C8 36 2 24 8 14c4-7 14-7 18 1 1 2 3 2 4 0 4-8 14-8 18-1 6 10 0 22-18 38z" fill="#d9929a"/><circle cx="22" cy="25" r="2.2" fill="#5e4040"/><circle cx="34" cy="25" r="2.2" fill="#5e4040"/><path d="M24 31c2 2 7 2 9 0" stroke="#5e4040" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>
+                </div>
+
+                <svg class="cake-svg" viewBox="0 0 320 300" role="img" aria-label="生日蛋糕">
+                    <!-- 盘子阴影 -->
+                    <ellipse cx="160" cy="276" rx="118" ry="16" fill="#e7dcc9" opacity="0.6"/>
+                    <!-- 蜡烛火苗 + 数字 1 蜡烛 -->
+                    <g class="cake-flame">
+                        <ellipse cx="160" cy="44" rx="7" ry="11" fill="#f6b25f"/>
+                        <ellipse cx="160" cy="46" rx="3.4" ry="6" fill="#fde3a7"/>
+                    </g>
+                    <g>
+                        <rect x="150" y="56" width="20" height="60" rx="8" fill="#e7a9ae"/>
+                        <rect x="150" y="56" width="20" height="60" rx="8" fill="url(#candleStripe)" opacity="0.5"/>
+                        <text x="160" y="98" text-anchor="middle" font-family="'Cormorant Garamond',serif" font-size="40" font-weight="600" fill="#fff">1</text>
+                    </g>
+                    <!-- 上层奶油 -->
+                    <path d="M70 150c0-18 40-30 90-30s90 12 90 30v10c0 16-40 26-90 26s-90-10-90-26z" fill="#fbf4ea"/>
+                    <!-- 奶油滴边 -->
+                    <path d="M70 158c10 14 18 2 28 12s18-2 28 10 18-2 28 10 18-2 28 10 18-2 28 10 18-2 22 6v-26c0-16-40-26-90-26s-90 10-90 26z" fill="#fff"/>
+                    <!-- 草莓 -->
+                    <g class="cake-berry">
+                        <path d="M118 120c0 9-7 15-12 15s-12-6-12-15c0-6 6-10 12-10s12 4 12 10z" fill="#e06b6b"/>
+                        <path d="M106 103c3 2 6 2 9 0-1 4-4 6-9 6-4 0-7-3-8-6 3 2 6 2 8 0z" fill="#8ab06a"/>
+                        <circle cx="100" cy="122" r="1.1" fill="#fff"/><circle cx="109" cy="126" r="1.1" fill="#fff"/><circle cx="104" cy="131" r="1.1" fill="#fff"/>
+                    </g>
+                    <g class="cake-berry" style="animation-delay:.4s">
+                        <path d="M172 116c0 9-7 15-12 15s-12-6-12-15c0-6 6-10 12-10s12 4 12 10z" fill="#e06b6b"/>
+                        <path d="M160 99c3 2 6 2 9 0-1 4-4 6-9 6-4 0-7-3-8-6 3 2 6 2 8 0z" fill="#8ab06a"/>
+                        <circle cx="154" cy="118" r="1.1" fill="#fff"/><circle cx="163" cy="122" r="1.1" fill="#fff"/><circle cx="158" cy="127" r="1.1" fill="#fff"/>
+                    </g>
+                    <g class="cake-berry" style="animation-delay:.8s">
+                        <path d="M226 120c0 9-7 15-12 15s-12-6-12-15c0-6 6-10 12-10s12 4 12 10z" fill="#e06b6b"/>
+                        <path d="M214 103c3 2 6 2 9 0-1 4-4 6-9 6-4 0-7-3-8-6 3 2 6 2 8 0z" fill="#8ab06a"/>
+                        <circle cx="208" cy="122" r="1.1" fill="#fff"/><circle cx="217" cy="126" r="1.1" fill="#fff"/><circle cx="212" cy="131" r="1.1" fill="#fff"/>
+                    </g>
+                    <!-- 蛋糕主体两层 -->
+                    <path d="M74 176c0-6 38-14 86-14s86 8 86 14v34c0 10-38 18-86 18s-86-8-86-18z" fill="#efd9bd"/>
+                    <path d="M74 210c0 10 38 18 86 18s86-8 86-18v30c0 10-38 18-86 18s-86-8-86-18z" fill="#e6c9a6"/>
+                    <!-- 夹心 -->
+                    <path d="M74 206c0-6 38-12 86-12s86 6 86 12-38 12-86 12-86-6-86-12z" fill="#d79aa0" opacity="0.8"/>
+                    <defs>
+                        <linearGradient id="candleStripe" x1="0" y1="0" x2="1" y2="1">
+                            <stop offset="0" stop-color="#fff"/><stop offset="0.5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#fff"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+
+            <p class="opening-wish">第一年，愿望是你。<br>下一年，也想和你。</p>
+            <p class="eyebrow soft">OUR FIRST YEAR, THE FIRST OF MANY</p>
+            <button class="enter-btn" id="enterBtn">一起回望我们的第一年 &#8594;</button>
+            <p class="opening-note">这几天，也是我在一起之后，第一次给你过生日。</p>
+        </div>
+
+        <p class="opening-foot">NO SOUND NEEDED · JUST A LITTLE LOVE</p>
+    </section>
+
+    <!-- 第二幕 · 年轮 / 爱心 -->
+    <section id="atlas" class="atlas">
+        <header class="atlas-top">
+            <div class="brand">
+                <span class="brand-ring" aria-hidden="true"></span>
+                <div class="brand-text">
+                    <div class="brand-name">我们的年轮</div>
+                    <div class="brand-en">THE DAYS, WITH YOU</div>
+                </div>
+            </div>
+            <a class="link-back" href="index.html">&#8592; 回到我们的故事</a>
+        </header>
+
+        <aside class="atlas-aside">
+            <p class="eyebrow">OUR FIRST ANNIVERSARY · 第一圈年轮</p>
+            <h2 class="atlas-title">我们的第一圈年轮</h2>
+            <p class="atlas-sub">一些普通的日子，因为你而值得收藏。</p>
+            <p class="atlas-stat"><span id="photoCount">0</span> 张我们的日子 · 相爱 <span id="loveDays">&mdash;</span> 天</p>
+            <p class="atlas-line">第一年，谢谢你来到我的生活里。</p>
+            <button class="letter-open" id="openLetter"><span>&#9825;</span> 打开给你的信</button>
+        </aside>
+
+        <div class="atlas-controls">
+            <div class="mode-toggle" id="modeToggle">
+                <button data-mode="rings" class="active">岁月年轮</button>
+                <button data-mode="heart">汇成一颗心</button>
+            </div>
+            <div class="slider-row">
+                <span>散落</span>
+                <input type="range" id="gather" min="0" max="100" value="0" aria-label="散落到相聚">
+                <span>相聚 <b id="gatherVal">0%</b></span>
+            </div>
+        </div>
+
+        <div class="stage-wrap">
+            <div class="stage" id="stage"></div>
+        </div>
+
+        <div class="stage-caption">
+            <p class="stage-cn" id="stageCaption">散落的这一年，原来都是你。</p>
+            <p class="eyebrow" id="stageEn">ALL OUR DAYS · 日子，一圈一圈。</p>
+        </div>
+
+        <div class="month-tabs" id="monthTabs"></div>
+        <p class="atlas-hint">滑动「散落 — 相聚」或滚动屏幕 · 年轮汇成爱心 · 点一张，看那天的故事</p>
+    </section>
+
+    <!-- 信 · 弹窗 -->
+    <div class="letter-overlay" id="letterOverlay" hidden>
+        <div class="letter-card" role="dialog" aria-modal="true" aria-label="给你的信">
+            <button class="letter-close" id="letterClose" aria-label="关闭">&times;</button>
+            <p class="letter-hi">亲爱的晓彤：</p>
+            <div class="letter-body">
+                <p>这一年，我最想谢谢的人，是你。</p>
+                <p>因为有你，很多原本平常的日子，都有了值得回头看的理由。照片留住的，是某一个瞬间；而我真正想记住的，是那个瞬间里，身边是你。</p>
+                <p>从上海到北京，从台州的海到香港的夜，从九江的长江边到张家口你家现包的饺子，鸣人和小猪咪也一前一后挤进了我们的生活。这一年我读完了博士，你还在你热爱的科研里发着光——我们各自忙着，却始终朝着同一个方向走。</p>
+                <p>这是我们的第一圈年轮。往后还有许多风景，我想和你慢慢走，也想把那些平平常常的小事，一件一件，过成我们的故事。</p>
+                <p>而这几天，是我在一起之后，第一次给你过生日。生日快乐，我的晓彤。第一年，谢谢你来到我的生活里；下一年，也请多多关照。</p>
+            </div>
+            <p class="letter-sign">&mdash;&mdash; 一直喜欢你的，洋</p>
+
+            <div class="letter-divider"></div>
+            <p class="eyebrow">TO OUR NEXT CHAPTER</p>
+            <p class="letter-next-title">下一圈年轮，还想和你&hellip;&hellip;</p>
+            <ol class="letter-wishes">
+                <li><span class="wish-no">01</span> 一起去看更多的海</li>
+                <li><span class="wish-no">02</span> 拍下属于我们的四季</li>
+                <li><span class="wish-no">03</span> 把平凡的日子，继续过成我们</li>
+            </ol>
+
+            <div class="letter-foot">
+                <span class="letter-date" id="letterDate"></span>
+                <button class="letter-ok" id="letterOk">合上信，回到我们 &#9825;</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 某一天的故事 · 弹窗 -->
+    <div class="story-overlay" id="storyOverlay" hidden>
+        <div class="story-card" role="dialog" aria-modal="true" aria-label="那一天的故事">
+            <button class="story-close" id="storyClose" aria-label="关闭">&times;</button>
+            <div class="story-photo-wrap">
+                <img class="story-photo" id="storyPhoto" src="" alt="">
+            </div>
+            <div class="story-info">
+                <div class="story-meta">
+                    <span class="story-date" id="storyDate"></span>
+                    <span class="story-city" id="storyCity"></span>
+                </div>
+                <h3 class="story-title" id="storyTitle"></h3>
+                <p class="story-desc" id="storyDesc"></p>
+            </div>
+        </div>
+    </div>
+
+    <script src="timeline-data.js"></script>
+    <script src="anniversary.js"></script>
+</body>
+</html>
