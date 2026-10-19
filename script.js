@@ -219,6 +219,15 @@ function linkifyHtml(escaped) {
     });
 }
 
+function storyLinkHtml(item) {
+    if (!item.link) return '';
+    const label = escapeHtml(item.linkText || '翻开这一页');
+    const href = escapeHtml(item.link);
+    const external = /^https?:\/\//.test(item.link);
+    const extra = external ? ' target="_blank" rel="noopener"' : '';
+    return `<a class="story-weblink" href="${href}"${extra}>${label} &#8594;</a>`;
+}
+
 function photosForDate(dateKey) {
     if (!dateKey || !imageList || !imageList.length) return [];
     const photos = [];
@@ -341,7 +350,7 @@ function renderStoryStage(index) {
         </div>
         <h3>${escapeHtml(item.title)}</h3>
         <p>${linkifyHtml(escapeHtml(item.description))}</p>
-        ${item.link ? `<a class="story-weblink" href="${escapeHtml(item.link)}">翻开这一页 · 我们的第一圈年轮 &#8594;</a>` : ''}
+        ${storyLinkHtml(item)}
         ${film}
         <div class="story-actions">
             ${jump}
