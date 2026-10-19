@@ -26,7 +26,9 @@ const timelineData = [
         dateKey: "2025-12-12",
         city: null,
         title: "我们的圣诞主题网页上线",
-        description: "https://liu-yang-maker.github.io/Christmas-tree-TY/"
+        description: "把这个圣诞做成了一棵会亮的树。灯还在，点进去就能看见。",
+        link: "https://liu-yang-maker.github.io/Christmas-tree-TY/",
+        linkText: "翻开这一页 · 我们的圣诞树"
     },
     {
         date: "2025.12.20",
@@ -54,7 +56,9 @@ const timelineData = [
         dateKey: "2026-01-19",
         city: null,
         title: "一个羞耻的表白网页上线",
-        description: "https://liu-yang-maker.github.io/love_wxt_in_your_face/"
+        description: "有些话当面说不出口，就做了一页把喜欢摊开。有点羞耻，但都是真的。",
+        link: "https://liu-yang-maker.github.io/love_wxt_in_your_face/",
+        linkText: "翻开这一页 · 那封表白"
     },
     {
         date: "2026.01.30",
@@ -251,7 +255,8 @@ const timelineData = [
         city: "shanghai",
         title: "我们在上海，第一次给你过生日 · 我们的第一圈年轮",
         description: "这是我们在一起之后，我第一次给你过生日，也快到我们的第一个一周年啦。我把这一年里我们走过的每一天，做成了一页只属于我们的回忆——愿望是你，下一年，也想和你。",
-        link: "anniversary.html"
+        link: "anniversary.html",
+        linkText: "翻开这一页 · 我们的第一圈年轮"
     },
     {
         date: "Our Story",
