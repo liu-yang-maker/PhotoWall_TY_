@@ -363,6 +363,67 @@ main {
     transform: translateY(0) scale(1);
 }
 
+.hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+}
+
+/* ===== Four Seasons 按钮：夜空深蓝 + 星点 ===== */
+.seasons-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    overflow: hidden;
+    background:
+        radial-gradient(1.5px 1.5px at 18% 30%, rgba(255, 255, 255, 0.9), transparent),
+        radial-gradient(1px 1px at 42% 72%, rgba(255, 255, 255, 0.75), transparent),
+        radial-gradient(1.5px 1.5px at 68% 24%, rgba(255, 240, 210, 0.9), transparent),
+        radial-gradient(1px 1px at 86% 64%, rgba(255, 255, 255, 0.7), transparent),
+        linear-gradient(135deg, #141a3a, #2a2f5e 55%, #3d2f5c);
+    box-shadow: 0 4px 18px rgba(30, 34, 80, 0.35);
+}
+
+.seasons-btn:hover {
+    box-shadow: 0 8px 28px rgba(60, 60, 140, 0.45);
+}
+
+.seasons-btn::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.18) 50%, transparent 70%);
+    transform: translateX(-120%);
+    transition: transform 0.9s ease;
+}
+
+.seasons-btn:hover::after {
+    transform: translateX(120%);
+}
+
+.seasons-dots {
+    position: relative;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex: 0 0 auto;
+    animation: spin-vinyl 8s linear infinite;
+    box-shadow: 0 0 8px rgba(255, 220, 230, 0.45);
+}
+
+.seasons-dots i {
+    position: absolute;
+    width: 50%;
+    height: 50%;
+}
+
+.seasons-dots i:nth-child(1) { left: 0; top: 0; background: #f4b8c8; }
+.seasons-dots i:nth-child(2) { right: 0; top: 0; background: #79bf5e; }
+.seasons-dots i:nth-child(3) { right: 0; bottom: 0; background: #e3b04b; }
+.seasons-dots i:nth-child(4) { left: 0; bottom: 0; background: #e8f1f8; }
+
 /* ===== 情话生成器 ===== */
 #loveQuote {
     text-align: center;

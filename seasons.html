@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>你愿意和我走过四季吗 · 我们的四季年轮</title>
+    <link rel="stylesheet" href="seasons.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+    <link rel="apple-touch-icon" sizes="180x180" href="readme_img/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="readme_img/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="readme_img/favicon/favicon-16x16.png">
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+    }
+    </script>
+</head>
+<body data-season="0">
+    <canvas id="scene" aria-label="四季年轮圆盘"></canvas>
+
+    <!-- 加载 -->
+    <div class="loader" id="loader">
+        <div class="loader-disc" aria-hidden="true">
+            <span class="q q0"></span><span class="q q1"></span><span class="q q2"></span><span class="q q3"></span>
+        </div>
+        <p class="loader-text">正在为我们种下四季&hellip;</p>
+    </div>
+
+    <!-- 左上：标题 -->
+    <header class="top">
+        <div class="title-block">
+            <h1 class="hand-title">你愿意和我走过四季吗</h1>
+            <p class="subtitle">晓彤 <span>&amp;</span> 洋 · 还有鸣人和来宝</p>
+            <p class="ring-count" id="ringCount">第 <b id="ringNo">1</b> 圈年轮 · 一起走过 <b id="loveDays">0</b> 天</p>
+        </div>
+        <a class="back-link" href="index.html" aria-label="回到我们的故事">&#8592; <span class="back-text">回到我们的故事</span><span class="back-short">返回</span></a>
+    </header>
+
+    <!-- 右侧：这一季 -->
+    <aside class="season-card" id="seasonCard" aria-live="polite">
+        <div class="sc-head">
+            <span class="sc-char" id="scChar">春</span>
+            <div class="sc-titles">
+                <p class="sc-name" id="scName">春意盎然</p>
+                <p class="sc-en" id="scEn">SPRING · WHERE FLOWERS MEET YOU</p>
+            </div>
+        </div>
+        <p class="sc-poem" id="scPoem"></p>
+        <p class="sc-label">这一季的我们</p>
+        <ul class="sc-list" id="scList"></ul>
+    </aside>
+
+    <!-- 点角色时的名字气泡 -->
+    <div class="bubble" id="bubble" hidden></div>
+
+    <!-- 底部：季节切换 -->
+    <div class="bottom">
+        <p class="hint" id="hint">拖动圆盘，陪我们走过四季 · 点一点小人和猫咪</p>
+        <nav class="season-nav" id="seasonNav" aria-label="切换季节">
+            <span class="nav-glider" id="navGlider" aria-hidden="true"></span>
+            <button data-season="0" class="active"><i>春</i><small>Spring</small></button>
+            <button data-season="1"><i>夏</i><small>Summer</small></button>
+            <button data-season="2"><i>秋</i><small>Autumn</small></button>
+            <button data-season="3"><i>冬</i><small>Winter</small></button>
+        </nav>
+        <div class="tools">
+            <button class="tool-btn" id="autoBtn" title="暂停或继续自转"><span class="tool-ico" id="autoIco">&#10074;&#10074;</span><span id="autoText">暂停旋转</span></button>
+            <button class="tool-btn" id="fsBtn" title="全屏观看"><span class="tool-ico">&#9974;</span><span id="fsText">全屏观看</span></button>
+        </div>
+    </div>
+
+    <p class="webgl-fallback" id="fallback" hidden>你的浏览器暂时打不开 3D 画面，换个浏览器再来陪我们走四季吧。</p>
+
+    <script src="timeline-data.js"></script>
+    <script type="module" src="seasons.js"></script>
+</body>
+</html>
