@@ -5,7 +5,8 @@
     const TILE_PALETTE = ['#b7c6ad', '#a7bcc9', '#c3b7d2', '#d4c2a2', '#e3bcbf', '#e6dcc6', '#c9d2bd'];
     const CITY_NAMES = {
         shanghai: '上海', beijing: '北京', taizhou: '台州', zhangjiakou: '张家口',
-        dalian: '大连', yantai: '烟台', jiujiang: '九江', shenzhen: '深圳', xianggang: '香港'
+        dalian: '大连', yantai: '烟台', jiujiang: '九江', shenzhen: '深圳', xianggang: '香港',
+        shenyang: '沈阳'
     };
     const VIDEO_RE = /\.(mp4|mov|webm|m4v|avi)$/i;
     const GOLDEN = Math.PI * (3 - Math.sqrt(5));

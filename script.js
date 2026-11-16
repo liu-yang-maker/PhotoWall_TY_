@@ -198,6 +198,7 @@ const STORY_CITIES = {
     jiujiang: '九江',
     shenzhen: '深圳',
     xianggang: '香港',
+    shenyang: '沈阳',
 };
 
 let activeStoryIndex = -1;

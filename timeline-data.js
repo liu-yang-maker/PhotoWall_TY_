@@ -259,6 +259,13 @@ const timelineData = [
         linkText: "翻开这一页 · 我们的第一圈年轮"
     },
     {
+        date: "2026.11.13",
+        dateKey: "2026-11-13",
+        city: "shenyang",
+        title: "我们在沈阳，参加 ICDM 会议",
+        description: "跟着 ICDM 来到沈阳。白天做了学术报告，其余的时间就把东北的味道挨个尝了一遍：东北菜、烧烤、麻辣烫、拌鸡架和利子，还有一锅热乎乎的铁锅炖。忙完也好好歇了一回——按摩、搓澡、泡汤，把这一趟走得很暖。"
+    },
+    {
         date: "Our Story",
         dateKey: "3030-01-01",
         city: null,
